@@ -1,0 +1,18 @@
+{
+  "id": "2026-09-24-01",
+  "tipo": "FATO",
+  "origem_ideia": "radar",
+  "gancho": "Faltam 56 dias pro GTA 6",
+  "subgancho": "O que já está confirmado sobre o lançamento",
+  "slides": [
+    {"titulo": "19 de novembro de 2026", "texto": "Data de lançamento divulgada para PS5 e Xbox Series X|S."},
+    {"titulo": "E o PC?", "texto": "Ainda sem data anunciada para PC até agora."},
+    {"titulo": "Controle especial", "texto": "A Sony mostrou um DualSense edição limitada de GTA 6 em 10/09."}
+  ],
+  "cta": "Salva e segue pra contagem",
+  "cta_texto": "Todo dia uma novidade de GTA, sem enrolação.",
+  "fonte": "PCGamesN, Beebom (set/2026)",
+  "pergunta": "Você vai jogar no dia do lançamento?",
+  "hashtags": ["#gta6brasil", "#playstation5"],
+  "imagem_fundo": null
+}
