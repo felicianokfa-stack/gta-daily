@@ -16,6 +16,8 @@ def build_caption(pauta: dict) -> str:
         parts.append(AVISO[pauta["tipo"].upper()])
     if pauta.get("fonte"):
         parts.append(f"Fonte: {pauta['fonte']}")
+    if pauta.get("credito_imagem"):
+        parts.append(pauta["credito_imagem"])
     if pauta.get("pergunta"):
         parts.append(f"💬 {pauta['pergunta']}")
     parts.append(pauta.get("cta_legenda", "Segue @_gtadaily pra acompanhar tudo de GTA todo dia."))

@@ -1,18 +1,28 @@
 {
   "id": "2026-09-24-01",
   "tipo": "FATO",
+  "status": "OFICIAL",
   "origem_ideia": "radar",
   "gancho": "Faltam 56 dias pro GTA 6",
-  "subgancho": "O que já está confirmado sobre o lançamento",
-  "slides": [
-    {"titulo": "19 de novembro de 2026", "texto": "Data de lançamento divulgada para PS5 e Xbox Series X|S."},
-    {"titulo": "E o PC?", "texto": "Ainda sem data anunciada para PC até agora."},
-    {"titulo": "Controle especial", "texto": "A Sony mostrou um DualSense edição limitada de GTA 6 em 10/09."}
+  "destaque": ["56 dias"],
+  "subgancho": "Tudo que já está confirmado sobre o lançamento",
+  "midia": [
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_3.jpg",
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/cena_4.jpg"
   ],
-  "cta": "Salva e segue pra contagem",
-  "cta_texto": "Todo dia uma novidade de GTA, sem enrolação.",
-  "fonte": "PCGamesN, Beebom (set/2026)",
+  "slides": [
+    {"titulo": "Chega em 19 de novembro", "destaque": ["19", "novembro"], "texto": "Data divulgada para PS5 e Xbox Series X|S."},
+    {"titulo": "E no PC?", "destaque": ["PC"], "texto": "Ainda sem data anunciada. Nada oficial até agora."},
+    {"titulo": "Controle edição GTA 6", "destaque": ["GTA 6"], "texto": "A Sony mostrou um DualSense de edição limitada em 10/09."}
+  ],
+  "cta": "Contagem regressiva todo dia",
+  "cta_destaque": ["todo", "dia"],
+  "cta_texto": "Notícia de GTA 6 sem enrolação.",
+  "fonte": "PCGamesN, Beebom",
+  "credito_imagem": "Imagem provisória (teste de layout)",
   "pergunta": "Você vai jogar no dia do lançamento?",
-  "hashtags": ["#gta6brasil", "#playstation5"],
-  "imagem_fundo": null
+  "hashtags": ["#gta6brasil", "#playstation5"]
 }

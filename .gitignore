@@ -1,3 +1,7 @@
 saida/
 __pycache__/
 *.pyc
+# mídia binária fica fora do git (Supabase Storage); provisória é gerada por pipeline.placeholder
+biblioteca/**/*.jpg
+biblioteca/**/*.png
+biblioteca/**/*.mp4

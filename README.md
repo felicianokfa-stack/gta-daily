@@ -12,12 +12,20 @@ O GTA Daily não é o produto. É onde testamos se a metodologia funciona, antes
 - Nada é publicado sem aprovação humana.
 - Sem senhas de plataformas. Integrações só por OAuth ou API oficial, e tokens nunca entram no repositório.
 
+## Uso de material oficial da Rockstar
+- Somente screenshots, artes e trailers **divulgados oficialmente**, com origem registrada em `biblioteca/indice.json`.
+- Trechos curtos, **sem o áudio original** (trilhas licenciadas geram bloqueio). O pipeline nunca inclui o áudio da mídia.
+- Crédito "Imagens: Rockstar Games" em todo post (`credito_imagem` na pauta).
+- Nada de material vazado ou de mapa feito por fã sem autorização.
+- Risco residual: uso de divulgação com crédito é prática comum, mas não é licença.
+
 ## Estrutura
 | Pasta | Conteúdo |
 |---|---|
 | `pautas/` | Uma pauta JSON por post (`AAAA-MM-DD-NN.json`) |
 | `pipeline/` | `render.py` (carrossel PNG 1080x1350 + Reel MP4 1080x1920) e `caption.py` (legenda) |
 | `templates/fonts/` | Anton e Inter, com licença OFL (os arquivos de licença estão junto) |
+| `biblioteca/` | Índice da mídia oficial (os arquivos ficam fora do git); `provisorio/` para teste de layout |
 | `registro/` | Planilha de posts, métricas, tempo de produção, radar e diário |
 | `docs/blocos/` | Documentos de cada bloco do projeto |
 
@@ -26,6 +34,9 @@ O GTA Daily não é o produto. É onde testamos se a metodologia funciona, antes
 pip install -r requirements.txt
 python -m pipeline.render pautas/2026-09-24-01.json --out saida
 # saida/<id>/carrossel_XX.png, reel.mp4, legenda.txt
+
+python -m pipeline.placeholder   # mídia provisória para teste (nunca publicar)
+python -m pipeline.perfil        # opções de foto de perfil e capas de destaques
 ```
 
 ## Formato da pauta
@@ -41,7 +52,10 @@ python -m pipeline.render pautas/2026-09-24-01.json --out saida
   "fonte": "De onde veio a informação",
   "pergunta": "Pergunta para comentários (legenda)",
   "hashtags": ["#extra"],
-  "imagem_fundo": "caminho relativo à pauta ou null"
+  "status": "URGENTE | NOVO | OFICIAL | VAZOU?",
+  "destaque": ["palavras da manchete em amarelo"],
+  "midia": ["biblioteca/... (uma por tela; repete em ciclo)"],
+  "credito_imagem": "Imagens: Rockstar Games"
 }
 ```
 
