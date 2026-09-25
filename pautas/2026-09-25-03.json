@@ -1,0 +1,30 @@
+{
+  "id": "2026-09-25-03",
+  "tipo": "FATO",
+  "status": "OFICIAL",
+  "origem_ideia": "radar",
+  "radar": "radar/2026-09-25.md#9",
+  "gancho": "GTA 6 vai chegar sem modo online",
+  "destaque": ["sem", "online"],
+  "subgancho": "O que a Take-Two confirmou e o que ainda é rumor",
+  "midia": [
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/cena_3.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_4.jpg"
+  ],
+  "slides": [
+    {"titulo": "Só single player no lançamento", "destaque": ["single", "player"], "tag": "FATO", "texto": "Strauss Zelnick, CEO da Take-Two, em 17/09: o GTA 6 chega como experiência single player no PS5 e Xbox Series."},
+    {"titulo": "E o GTA Online de hoje?", "destaque": ["GTA", "Online"], "tag": "FATO", "texto": "Segundo Zelnick, o GTA Online atual continua e segue firme."},
+    {"titulo": "Online só em 2027?", "destaque": ["2027"], "tag": "RUMOR", "texto": "O CEO da Twitch disse à Bloomberg que espera o multiplayer em 2027. A Rockstar não confirmou."}
+  ],
+  "cta": "Faz falta online no lançamento?",
+  "cta_destaque": ["falta"],
+  "cta_texto": "Comenta aí. GTA todo dia, sem enrolação.",
+  "fonte": "Take-Two (17/09); Bloomberg via PC Gamer",
+  "credito_imagem": "Imagem provisória (teste de layout)",
+  "legenda_corpo": "No encontro com acionistas em 17/09, o CEO da Take-Two, Strauss Zelnick, disse que o GTA 6 será lançado como experiência single player, sem gastos recorrentes previstos no lançamento, e que o GTA Online atual continua.\n\n⚠️ RUMOR: o CEO da Twitch, Dan Clancy, disse à Bloomberg que espera o multiplayer do GTA 6 em 2027. A Rockstar não confirmou nenhuma data.",
+  "pergunta": "Faz falta ter online no lançamento?",
+  "hashtags": ["#gta6brasil", "#gtaonline"]
+}

@@ -294,7 +294,7 @@ def telas(pauta: dict) -> list[Tela]:
 
     out = [Tela(pauta["gancho"], pauta.get("subgancho", ""), pauta["tipo"], m(0), pauta.get("destaque", []))]
     for i, s in enumerate(pauta["slides"], start=1):
-        out.append(Tela(s["titulo"], s.get("texto", ""), None, m(i, s), s.get("destaque", [])))
+        out.append(Tela(s["titulo"], s.get("texto", ""), s.get("tag"), m(i, s), s.get("destaque", [])))
     out.append(Tela(pauta.get("cta", "Segue pra não perder nada"), pauta.get("cta_texto", ""), None,
                     m(len(out)), pauta.get("cta_destaque", []), final=True))
     return out
