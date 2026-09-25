@@ -1,0 +1,65 @@
+{
+  "id": "2026-09-25-02",
+  "serie": "gta-online-da-semana",
+  "tipo": "SEMANAL",
+  "status": "NOVO",
+  "origem_ideia": "radar",
+  "radar": "radar/2026-09-25.md#2",
+  "gancho": "GTA Online: o que vale fazer essa semana",
+  "destaque": [
+    "essa",
+    "semana"
+  ],
+  "subgancho": "Bônus de 24 a 30 de setembro",
+  "midia": [
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/cena_3.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_4.jpg",
+    "biblioteca/provisorio/cena_2.jpg"
+  ],
+  "slides": [
+    {
+      "titulo": "2x na Boate",
+      "destaque": [
+        "2x"
+      ],
+      "texto": "GTA$ e RP em dobro nas missões de mercadoria da Boate."
+    },
+    {
+      "titulo": "Boate de graça",
+      "destaque": [
+        "graça"
+      ],
+      "texto": "Boate grátis nesta semana. Confira as condições no jogo."
+    },
+    {
+      "titulo": "Carro grátis com HSW",
+      "destaque": [
+        "grátis"
+      ],
+      "texto": "Penaud La Coureuse para quem completou um dos 3 desafios semanais anteriores. HSW só no PS5 e Xbox Series."
+    },
+    {
+      "titulo": "Também em dobro",
+      "destaque": [
+        "dobro"
+      ],
+      "texto": "Entregas QuickiePharm, Community Combat Series e Featured Series."
+    }
+  ],
+  "cta": "Toda quinta tem",
+  "cta_destaque": [
+    "quinta"
+  ],
+  "cta_texto": "Salva pra não esquecer e segue pra próxima semana.",
+  "fonte": "GTABase, PCQuest, GTA Boss",
+  "credito_imagem": "Imagem provisória (teste de layout)",
+  "legenda_corpo": "Resumo da atualização semanal do GTA Online (24 a 30/09), segundo sites especializados. Confira os detalhes no jogo.",
+  "pergunta": "Você ainda joga GTA Online esperando o 6?",
+  "hashtags": [
+    "#gtaonline",
+    "#gta5"
+  ]
+}

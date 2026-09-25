@@ -1,51 +1,50 @@
 # Perfil @_gtadaily: proposta de configuração
 
-Estado em 24/09/2026: 0 seguidores, 2 seguindo, 0 posts, sem foto e sem bio (verificado via vidIQ).
+**Estado verificado (vidIQ, 25/09/2026):** 0 seguidores, 2 seguindo, 0 posts, sem foto e sem bio. A proposta abaixo ainda não foi aplicada.
 
-Tudo abaixo é **hipótese**. Bio e nome podem ser testados depois, com dados.
+Tudo abaixo é **HIPÓTESE**. Nome e bio podem ser testados depois, com dados. O escopo é todo o universo GTA (VI, V, Online), não só o GTA VI.
 
-## 1. Conta profissional
+## 1. Conta profissional (obrigatório)
 Configurações → Tipo de conta e ferramentas → **Mudar para conta profissional** → **Criador de conteúdo**.
-- Libera os Insights (alcance, compartilhamentos, salvamentos, seguidores ganhos), sem os quais o laboratório não tem dados.
-- **Categoria:** escolher a opção de games/jogos que aparecer na lista (por exemplo, "Criador de vídeos de jogos" ou "Gamer"). Se não houver, usar "Criador digital".
-- Não exibir a categoria no perfil, para ficar mais limpo (opcional).
+- É requisito para os Insights e para publicar via API (a Meta só permite publicação por API em contas Business ou Creator, conforme a documentação de Content Publishing).
+- **Categoria:** a opção de games que aparecer (por exemplo, "Criador de vídeos de jogos" ou "Gamer"). Se não houver, "Criador digital".
 
-## 2. Nome (campo pesquisável, diferente do @)
-**`GTA Daily | Notícias GTA 6`**
-- O campo nome entra na busca do Instagram. "Notícias GTA 6" é o que o público digita.
-- Diferencia do perfil parecido @gtadailys ("Daily GTA Videos").
+## 2. Nome (campo pesquisável, até 30 caracteres)
+**Recomendado: `GTA Daily | GTA 6 • GTA Online`** (29 caracteres)
+- Cobre as duas buscas principais do momento: GTA 6 antes do lançamento e GTA Online toda semana.
+- Diferencia do perfil parecido @gtadailys.
+- Alternativa: `GTA Daily | Notícias de GTA` (27), mais amplo, mas com menos termos de busca.
 
-## 3. Bio (limite: 150 caracteres). Escolher uma
-**Opção 1: direta (recomendada para começar)**
+## 3. Bio (até 150 caracteres). Escolher uma
+**Opção 1: recomendada**
 ```
-🎮 GTA 6 todo dia, sem enrolação
-📰 Notícias, curiosidades e rumores (sempre rotulados)
-⏳ Lançamento: 19/11/2026
-```
-**Opção 2: foco em confiança**
-```
-Notícias de GTA 6 com fonte 📰
+🎮 GTA todo dia, sem enrolação
+📰 GTA 6, GTA Online e curiosidades
 ✅ Fato é fato. ⚠️ Rumor é rumor.
-Ativa as notificações 🔔
 ```
-**Opção 3: foco em contagem**
+**Opção 2: foco no lançamento**
 ```
-⏳ Contagem regressiva pro GTA 6
-📰 Uma notícia por dia, direto ao ponto
-🇧🇷 Em português
+⏳ Contagem pro GTA 6 (19/11/2026)
+💰 Bônus do GTA Online toda quinta
+📰 Notícia com fonte, rumor rotulado
 ```
-A data de lançamento vem de fontes secundárias (PCGamesN, Beebom). Se mudar, atualizamos a bio.
+**Opção 3: curta**
+```
+Tudo de GTA, todo dia 🎮
+GTA 6 • GTA Online • Curiosidades
+```
+**Data de lançamento (19/11/2026):** ✅ FATO, anunciada pela Rockstar no Newswire (06/11/2025) e reafirmada pela Take-Two em ago/2026. Ver [`memoria/fatos.md`](../memoria/fatos.md). Se mudar, a bio é atualizada.
 
 ## 4. Foto
-Opções geradas por `python -m pipeline.perfil`:
-- **A:** "GD" branco sobre degradê rosa→laranja. É o selo que aparece nos posts. **Recomendada:** mais legível em tamanho pequeno e liga a foto aos posts.
-- **B:** "GD" em degradê com a faixa "DAILY".
+Opções geradas com `python -m pipeline.perfil`:
+- **A:** "GD" branco sobre degradê rosa→laranja, o mesmo selo dos posts. **Recomendada:** mais legível em 110 px e liga a foto aos posts.
+- **B:** "GD" em degradê + faixa "DAILY".
 - **C:** selo circular "GTA DAILY" com ponto vermelho "ao vivo".
 
-Não usamos logo, fonte nem arte da Rockstar na identidade, para evitar confusão com marca oficial.
+Sem logo, fonte ou arte da Rockstar na identidade, para evitar confusão com marca oficial.
 
 ## 5. Link
-**Nenhum por enquanto.** Ainda não há destino que justifique o clique. Candidatos futuros, como teste: canal do WhatsApp ou Telegram de alertas ("avisamos quando sair trailer").
+**Nenhum por enquanto.** Candidato futuro, a testar: canal de alertas (WhatsApp ou Telegram) com o mote "avisamos quando sair trailer ou bônus".
 
 ## 6. Destaques
-Capas prontas: Notícias, Rumores e Contagem. Criar os destaques quando houver os primeiros Stories.
+Capas prontas: Notícias, Rumores e Contagem. Proposta: acrescentar "GTA Online" (série semanal). Criar os destaques quando houver os primeiros Stories.

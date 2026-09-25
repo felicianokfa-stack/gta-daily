@@ -1,0 +1,58 @@
+{
+  "id": "2026-09-25-01",
+  "tipo": "FATO",
+  "status": "NOVO",
+  "origem_ideia": "radar",
+  "radar": "radar/2026-09-25.md#1",
+  "gancho": "O primeiro ator do GTA 6 foi confirmado",
+  "destaque": [
+    "primeiro",
+    "ator"
+  ],
+  "subgancho": "E a confirmação não veio da Rockstar",
+  "midia": [
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_4.jpg",
+    "biblioteca/provisorio/cena_3.jpg"
+  ],
+  "slides": [
+    {
+      "titulo": "Stephen Root é Brian Heder",
+      "destaque": [
+        "Stephen",
+        "Root"
+      ],
+      "texto": "Ele mesmo confirmou o papel em entrevista à Associated Press."
+    },
+    {
+      "titulo": "Quem é Brian Heder?",
+      "destaque": [
+        "Brian",
+        "Heder"
+      ],
+      "texto": "Um traficante das antigas nas Leonida Keys, segundo o guia de personagens da Rockstar."
+    },
+    {
+      "titulo": "E o resto do elenco?",
+      "destaque": [
+        "elenco"
+      ],
+      "texto": "Segundo relatos, a Rockstar lembrou os atores do contrato de sigilo. O resto segue em segredo."
+    }
+  ],
+  "cta": "Qual ator você quer no GTA 6?",
+  "cta_destaque": [
+    "ator"
+  ],
+  "cta_texto": "Comenta aí. GTA todo dia, sem enrolação.",
+  "fonte": "Associated Press via Variety e Kotaku",
+  "credito_imagem": "Imagem provisória (teste de layout)",
+  "legenda_corpo": "Stephen Root confirmou que dubla Brian Heder no GTA 6. É o primeiro nome do elenco confirmado, e foi o próprio ator que contou, não a Rockstar. Segundo relatos (não confirmados pela Rockstar), o estúdio lembrou o restante do elenco do contrato de sigilo.",
+  "pergunta": "Qual ator você quer ver no GTA 6?",
+  "hashtags": [
+    "#gta6brasil",
+    "#stephenroot"
+  ]
+}

@@ -10,6 +10,7 @@ provisório para teste de layout. Vídeos entram SEM o áudio original.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import math
 import subprocess
@@ -24,6 +25,8 @@ from pipeline.caption import build_caption
 
 ROOT = Path(__file__).resolve().parent.parent
 FONTS = ROOT / "templates" / "fonts"
+
+LANCAMENTO_GTA6 = dt.date(2026, 11, 19)  # memoria/fatos.md
 
 HANDLE = "@_gtadaily"
 BRAND = "GTA DAILY"
@@ -40,6 +43,7 @@ TAG_COLORS = {
     "RUMOR": (255, 176, 32),
     "CURIOSIDADE": (80, 160, 255),
     "OPINIÃO": (190, 120, 255),
+    "SEMANAL": (255, 64, 129),  # séries recorrentes com info de fontes especializadas
 }
 STATUS_COLORS = {"URGENTE": RED, "NOVO": PINK, "OFICIAL": (46, 204, 113), "VAZOU?": ORANGE}
 
@@ -468,6 +472,22 @@ def render_reel(pauta: dict, pauta_dir: Path, out: Path) -> Path:
     return path
 
 
+# ================================================================ tokens
+
+def aplicar_tokens(obj, hoje: dt.date):
+    """Substitui tokens dinâmicos (ex.: {dias_gta6}) em todos os textos da pauta."""
+    tokens = {"{dias_gta6}": str((LANCAMENTO_GTA6 - hoje).days)}
+    if isinstance(obj, str):
+        for k, v in tokens.items():
+            obj = obj.replace(k, v)
+        return obj
+    if isinstance(obj, list):
+        return [aplicar_tokens(o, hoje) for o in obj]
+    if isinstance(obj, dict):
+        return {k: aplicar_tokens(v, hoje) for k, v in obj.items()}
+    return obj
+
+
 # ================================================================ CLI
 
 def main():
@@ -475,10 +495,12 @@ def main():
     ap.add_argument("pauta")
     ap.add_argument("--out", default="saida")
     ap.add_argument("--so", choices=["carrossel", "reel"], help="gera só um formato")
+    ap.add_argument("--data", type=dt.date.fromisoformat, default=dt.date.today(),
+                    help="data de publicação (AAAA-MM-DD) para tokens como {dias_gta6}")
     args = ap.parse_args()
 
     pauta_path = Path(args.pauta).resolve()
-    pauta = json.loads(pauta_path.read_text(encoding="utf-8"))
+    pauta = aplicar_tokens(json.loads(pauta_path.read_text(encoding="utf-8")), args.data)
     out = Path(args.out) / pauta["id"]
     out.mkdir(parents=True, exist_ok=True)
 
