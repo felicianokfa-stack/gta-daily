@@ -1,0 +1,32 @@
+{
+  "id": "2026-09-26-01",
+  "tipo": "FATO",
+  "status": "NOVO",
+  "origem_ideia": "radar",
+  "radar": "radar/2026-09-26.md#1",
+  "gancho": "Imagens novas do GTA 6 chegam na terça",
+  "destaque": ["terça"],
+  "subgancho": "A Game Informer vai mostrar 12 screenshots inéditas",
+  "midia": [
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_3.jpg",
+    "biblioteca/provisorio/cena_4.jpg",
+    "biblioteca/provisorio/cena_1.jpg"
+  ],
+  "slides": [
+    {"titulo": "GTA 6 na capa", "destaque": ["capa"], "tag": "FATO", "texto": "Jason e Lucia estampam a próxima capa da Game Informer, com 14 páginas de matéria."},
+    {"titulo": "12 imagens inéditas", "destaque": ["12"], "tag": "FATO", "texto": "Uma dúzia de screenshots novas, além da arte da capa e entrevistas com a Rockstar."},
+    {"titulo": "Clima, fauna e Miami", "destaque": ["Clima"], "tag": "FATO", "texto": "Temas anunciados: sistema de clima avançado, vida selvagem e a pesquisa da Rockstar sobre Miami e a Flórida."},
+    {"titulo": "Sai terça, 29/09", "destaque": ["29/09"], "tag": "FATO", "texto": "Edição digital na terça. A impressa chega nas semanas seguintes."}
+  ],
+  "cta": "Segue pra ver tudo na terça",
+  "cta_destaque": ["terça"],
+  "cta_texto": "A gente resume a matéria assim que sair.",
+  "fonte": "Game Informer (25/09) via Push Square",
+  "credito_imagem": "Imagem provisória (teste de layout)",
+  "legenda_corpo": "A Game Informer revelou em 25/09 que o GTA 6 é a sua próxima capa: 14 páginas com entrevistas da Rockstar e 12 screenshots inéditas. Os temas anunciados incluem o sistema de clima, a vida selvagem e a pesquisa sobre Miami e a Flórida. A edição digital sai na terça, 29/09.",
+  "pergunta": "O que você mais quer ver nas imagens novas?",
+  "hashtags": ["#gta6brasil", "#gameinformer"]
+}

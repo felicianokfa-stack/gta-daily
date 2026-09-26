@@ -21,6 +21,9 @@ Legenda: ✅ FATO · 🟡 REPORTADO (fonte secundária, não confirmado pela fon
 | Lançamento à meia-noite no horário local | 🟡 | PCGamesN; horário para o Brasil **não verificado** | 25/09/2026 |
 | Zelnick (CEO Take-Two), encontro com acionistas de **17/09/2026**: GTA 6 lança "como experiência single player em duas grandes plataformas", sem gasto recorrente previsto no lançamento; o que continua é o GTA Online atual | ✅ | GTA BOOM, Inven Global (declaração pública do CEO) | 25/09/2026 |
 | Multiplayer do GTA 6 em **2027** | 🔴 | Dan Clancy (CEO da Twitch) à Bloomberg, set/2026; **a Rockstar não confirmou** | 25/09/2026 |
+| **Game Informer**: GTA VI na capa (revelada em 25/09); 14 páginas, entrevistas com a Rockstar, **12 screenshots inéditas**; temas: clima avançado, vida selvagem, pesquisa sobre Miami e a Flórida; digital em **29/09/2026** | ✅ | Game Informer (cover reveal), Push Square, Windows Report | 26/09/2026 |
+| **GTA VI: The Album** (Rockstar + Atlantic Records), anunciado em 17/09: 34 faixas originais; sai em 19/11 (CD e vinil); artistas incluem Travis Scott, Yung Lean, CA7RIEL | ✅ | Yahoo, Tech Times, Sweety High | 26/09/2026 |
+| Outros artistas citados no álbum (Morgan Wallen, Rauw Alejandro, Keith Richards) | 🟡 | Resumo de busca; conferir antes de usar | 26/09/2026 |
 | Extended Look: **31,1 milhões** de views na Netflix de 27 a 30/08; nº 1 em filmes em inglês em 87 de 93 países | ✅ | Variety, What's on Netflix (Top 10 da Netflix) | 25/09/2026 |
 
 ## GTA Online

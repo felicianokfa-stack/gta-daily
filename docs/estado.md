@@ -43,6 +43,7 @@ Documento vivo. Substitui o antigo "Bloco 1: Plano de validação". Os blocos co
 | C5 | Reel ≤ 15 s retém proporcionalmente mais que Reel ≥ 30 s | % assistido |
 | C6 | Séries recorrentes ("Faltam X dias", "GTA Online da semana") geram retorno e seguidores | seguidores/alcance ao longo da série |
 | C7 | Em português, a concorrência de notícias de GTA é menor que em inglês | benchmark (vidIQ) |
+| C8 | Conteúdo de antecipação ("vem aí na terça") converte mais seguidores que notícia já saturada | seguidores/alcance |
 
 **Método e produto**
 | # | Hipótese | Medida |
@@ -69,6 +70,8 @@ Documento vivo. Substitui o antigo "Bloco 1: Plano de validação". Os blocos co
 7. **Janela pós-lançamento:** depois de 19/11, o assunto muda para guias, segredos e comparações. O radar precisa se preparar para essa virada.
 
 ## 7. Próximas ações do Agente (sem depender do dono)
+- **29/09 (terça): cobrir a matéria da Game Informer** (resumo com FATOS e fonte). Se a pauta de antecipação `2026-09-26-01` for publicada, essa entrega vira compromisso.
+- Série "Faltam X dias" agora é **contagem + 1 fato novo por dia**.
 - Radar diário às 08:00 com pauta e prévia.
 - Verificar o Vintage Vice City Pack e o horário de lançamento no Brasil.
 - Manter `memoria/fatos.md` atualizado.

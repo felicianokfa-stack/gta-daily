@@ -1,0 +1,31 @@
+{
+  "id": "2026-09-26-02",
+  "serie": "faltam-x-dias",
+  "tipo": "FATO",
+  "status": "OFICIAL",
+  "origem_ideia": "radar",
+  "radar": "radar/2026-09-26.md#2",
+  "gancho": "Faltam {dias_gta6} dias pro GTA 6",
+  "destaque": ["{dias_gta6} dias"],
+  "subgancho": "Fato do dia: o jogo terá um álbum só dele",
+  "midia": [
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/cena_4.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/cena_3.jpg"
+  ],
+  "slides": [
+    {"titulo": "GTA VI: The Album", "destaque": ["The", "Album"], "tag": "FATO", "texto": "34 músicas originais feitas para o jogo, em parceria com a Atlantic Records."},
+    {"titulo": "Travis Scott no time", "destaque": ["Travis", "Scott"], "tag": "FATO", "texto": "Ele está entre os artistas, ao lado de nomes como Yung Lean e o argentino CA7RIEL."},
+    {"titulo": "Sai junto com o jogo", "destaque": ["junto"], "tag": "FATO", "texto": "O álbum também chega em 19/11."}
+  ],
+  "cta": "Contagem regressiva todo dia",
+  "cta_destaque": ["todo", "dia"],
+  "cta_texto": "Um fato novo por dia até o lançamento.",
+  "fonte": "Rockstar e Atlantic Records (17/09) via Yahoo",
+  "credito_imagem": "Imagem provisória (teste de layout)",
+  "legenda_corpo": "Faltam {dias_gta6} dias. Fato do dia: a Rockstar e a Atlantic Records anunciaram em 17/09 o GTA VI: The Album, com 34 músicas originais criadas para o universo de Vice City e Leonida. Entre os artistas estão Travis Scott, Yung Lean e o argentino CA7RIEL. O álbum sai em 19/11, junto com o jogo.",
+  "pergunta": "Que artista você queria ouvir na rádio do GTA 6?",
+  "hashtags": ["#gta6brasil", "#travisscott"]
+}
