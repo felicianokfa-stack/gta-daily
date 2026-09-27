@@ -8,7 +8,7 @@ Como o Agente opera o GTA Daily no dia a dia. As ferramentas disponíveis hoje e
 | **Radar diário** | Todo dia, 08:00 (horário de Brasília) | Pesquisa o universo GTA (VI, V, Online, comunidade), classifica oportunidades, atualiza os fatos, renderiza a melhor pauta | `radar/AAAA-MM-DD.md`, pauta em `pautas/`, prévia para aprovação |
 | **GTA Online semanal** | Quinta-feira (dia da atualização semanal) | Resume bônus, descontos e itens grátis da semana | Pauta da série semanal |
 | **Métricas** | 24h, 72h e 7d após cada post | Coleta os Insights (quando a conta for profissional e estiver conectada) | Aba Métricas do `registro/registro.xlsx` |
-| **Revisão semanal** | Domingo | Compara resultados, atualiza SINAIS e APRENDIZADOS e propõe os testes da semana | `memoria/aprendizados.md`, ajuste em `memoria/dna.md` |
+| **Revisão semanal** | Domingo | Compara resultados, atualiza SINAIS e APRENDIZADOS e propõe os testes da semana | `docs/revisao-semanal/AAAA-MM-DD.md`, `memoria/aprendizados.md`, ajuste em `memoria/dna.md` |
 
 ## 2. Matriz de autonomia
 | Nível | Ações | Regra |
