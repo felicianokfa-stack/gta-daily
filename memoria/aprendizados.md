@@ -13,3 +13,5 @@ Registro cronológico. Cada entrada tem **data**, **rótulo** (SINAL / RESULTADO
 | 27/09/2026 | SINAL (produto) | O gargalo da semana 0 foi a ativação (perfil não configurado), não a produção: 7 pautas prontas, 0 publicadas | 1 semana | docs/revisao-semanal/2026-09-27.md |
 | 27/09/2026 | SINAL (operação) | 5 de 7 pautas de notícia perdem a validade em 1–4 dias. É preciso ter estoque atemporal | 7 pautas | docs/revisao-semanal/2026-09-27.md |
 | 27/09/2026 | SINAL (operação) | A revisão do Agente pegou 5 erros ou exageros antes de publicar. A etapa de verificação é essencial | 5 casos | docs/revisao-semanal/2026-09-27.md |
+| 29/09/2026 | SINAL (operação) | A rotina de 28/09 parou no meio sem aviso. Nova regra: toda execução termina com radar + mensagem, mesmo que seja "sem novidades" | 1 falha | radar/2026-09-29.md |
+| 29/09/2026 | SINAL (operação) | O dono recusou a checagem agendada extra para a tarde. Eventos com horário marcado são cobertos no radar das 08:00 do dia seguinte, sem rotinas extras | 1 decisão | Recusa do agendamento |

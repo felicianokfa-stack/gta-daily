@@ -1,0 +1,31 @@
+{
+  "id": "2026-09-29-01",
+  "serie": "faltam-x-dias",
+  "tipo": "FATO",
+  "status": "OFICIAL",
+  "origem_ideia": "radar",
+  "radar": "radar/2026-09-29.md#2",
+  "gancho": "Faltam {dias_gta6} dias pro GTA 6",
+  "destaque": ["{dias_gta6} dias"],
+  "subgancho": "Fato do dia: Leonida é a Flórida do GTA",
+  "midia": [
+    "biblioteca/provisorio/cena_1.jpg",
+    "biblioteca/provisorio/cena_3.jpg",
+    "biblioteca/provisorio/clipe_1.mp4",
+    "biblioteca/provisorio/cena_2.jpg",
+    "biblioteca/provisorio/cena_4.jpg"
+  ],
+  "slides": [
+    {"titulo": "Leonida é a Flórida", "destaque": ["Leonida"], "tag": "FATO", "texto": "O estado fictício do GTA 6 é inspirado na Flórida."},
+    {"titulo": "Vice City é Miami", "destaque": ["Vice", "City"], "tag": "FATO", "texto": "A cidade volta em versão moderna, inspirada em Miami."},
+    {"titulo": "Tem até as Keys", "destaque": ["Keys"], "tag": "FATO", "texto": "As Leonida Keys, inspiradas nas Florida Keys, aparecem no guia de personagens da Rockstar."}
+  ],
+  "cta": "Contagem regressiva todo dia",
+  "cta_destaque": ["todo", "dia"],
+  "cta_texto": "Um fato novo por dia até o lançamento.",
+  "fonte": "Rockstar Games; Game Informer",
+  "credito_imagem": "Imagem provisória (teste de layout)",
+  "legenda_corpo": "Faltam {dias_gta6} dias. Fato do dia: o GTA 6 se passa em Leonida, estado fictício inspirado na Flórida, com a Vice City moderna (inspirada em Miami) e as Leonida Keys (inspiradas nas Florida Keys). Hoje sai a matéria da Game Informer sobre como a Rockstar pesquisou Miami e a Flórida para criar o mapa.",
+  "pergunta": "Qual parte de Leonida você quer explorar primeiro?",
+  "hashtags": ["#gta6brasil", "#vicecity"]
+}
