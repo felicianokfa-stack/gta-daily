@@ -4,6 +4,7 @@ import { signOutAction } from "../actions";
 
 const NAV = [
   { href: "/", label: "Painel" },
+  { href: "/oportunidades", label: "Oportunidades" },
   { href: "/execucoes", label: "Execuções" },
   { href: "/projetos", label: "Projetos" },
   { href: "/agentes", label: "Agentes e conectores" },

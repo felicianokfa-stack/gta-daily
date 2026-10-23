@@ -9,7 +9,7 @@ export interface ProjectRow {
   language: string;
   platforms: string[];
   editorial_rules: Record<string, unknown>;
-  settings: { max_attempts?: number; max_corrections?: number };
+  settings: { max_attempts?: number; max_corrections?: number; monthly_budget_usd?: number };
   created_at: Date;
 }
 
@@ -55,6 +55,7 @@ export interface TaskRow {
   finished_at: Date | null;
   duration_ms: number | null;
   usage: unknown;
+  cost_usd: string;
   idempotency_key: string;
   created_at: Date;
   updated_at: Date;
@@ -77,3 +78,39 @@ export type ProcessOutcome =
   | "action_required"
   | "cancelled"
   | "lease_lost";
+
+export interface OpportunityRow {
+  id: string;
+  project_id: string;
+  owner_id: string;
+  run_id: string;
+  topic: string;
+  summary: string;
+  verification_state: "verificada" | "parcial" | "nao_verificada";
+  relevance: number;
+  relevance_reason: string;
+  priority: "alta" | "media" | "baixa";
+  claims: { claim: string; label: string; confidence: string; evidence_urls: string[]; notes: string }[];
+  contradictions: string[];
+  caveats: string[];
+  source_urls: string[];
+  quality_gate: { passed: boolean; reasons: string[]; checks: { rule: string; passed: boolean; detail: string }[] };
+  status: "nova" | "pronta_para_estrategia" | "descartada";
+  decided_by: string | null;
+  decided_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface SourceRecordRow {
+  id: string;
+  project_id: string;
+  url: string;
+  title: string;
+  publisher: string | null;
+  published_at: string | null;
+  kind: "primaria" | "secundaria";
+  times_seen: number;
+  created_at: Date;
+  updated_at: Date;
+}

@@ -12,8 +12,11 @@ function stable(value: unknown): unknown {
   return value;
 }
 
-/** Hash estável da entrada (sem notas de correção) para reaproveitar resultados válidos. */
+/**
+ * Hash estável da entrada para reaproveitar resultados válidos.
+ * Ignora o que é só orientação ao agente: notas de correção e fontes já conhecidas do projeto.
+ */
 export function inputHash(input: Record<string, unknown>): string {
-  const { correction_notes: _ignored, ...rest } = input;
+  const { correction_notes: _notes, known_sources: _known, ...rest } = input;
   return createHash("sha256").update(JSON.stringify(stable(rest))).digest("hex");
 }

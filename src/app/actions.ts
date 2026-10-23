@@ -32,6 +32,7 @@ export async function createProjectAction(_prev: ActionState, form: FormData): P
       audience: form.get("audience") ?? "",
       language: form.get("language") || "pt-BR",
       platforms: form.getAll("platforms"),
+      monthly_budget_usd: form.get("monthly_budget_usd") || 0,
     });
     await createProject(await getDb(), user.id, data);
   } catch (error) {
@@ -94,6 +95,20 @@ export async function retryTaskAction(runId: string, taskId: string): Promise<Ac
   }
   revalidatePath(`/execucoes/${runId}`);
   return { ok: true, message: "Nova tentativa enfileirada." };
+}
+
+const OpportunityDecision = z.enum(["nova", "pronta_para_estrategia", "descartada"]);
+
+export async function decideOpportunityAction(opportunityId: string, status: string): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    await (await getOrchestrator()).decideOpportunity(user.id, opportunityId, OpportunityDecision.parse(status));
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath("/oportunidades");
+  revalidatePath("/");
+  return { ok: true, message: "Decisão registrada." };
 }
 
 /** Processa as tarefas prontas do próprio usuário (equivale a uma rodada do worker). */

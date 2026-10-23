@@ -10,6 +10,8 @@ export interface NicheContext {
   key_terms: string[];
   source_guidance: string[];
   editorial_rules: string[];
+  /** Domínios de fontes primárias (oficiais) usados pelo portão de qualidade. */
+  primary_domains: string[];
 }
 
 const GTA_VI: NicheContext = {
@@ -24,6 +26,7 @@ const GTA_VI: NicheContext = {
     "Use veículos especializados reconhecidos como fontes secundárias e indique-os como tal.",
     "Vazamentos e perfis de rumores só podem aparecer classificados como rumor, nunca como fato.",
   ],
+  primary_domains: ["rockstargames.com", "take2games.com", "playstation.com", "xbox.com"],
   editorial_rules: [
     "Diferencie fato confirmado, rumor, teoria, estimativa e hipótese.",
     "Não prometa viralização nem trate pontuações como probabilidades.",

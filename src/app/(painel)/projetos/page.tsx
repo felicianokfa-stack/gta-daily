@@ -4,6 +4,7 @@ import { PLATFORM_LABEL } from "@/lib/labels";
 import { getNiche, listNiches } from "@/core/niches";
 import { listProjects } from "@/orchestrator/queries";
 import { Badge, Card, Empty, PageHeader, formatDate } from "@/components/ui";
+import { formatUsd } from "@/connectors/pricing";
 import { ProjectForm } from "./project-form";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,9 @@ export default async function ProjetosPage() {
                   <div>
                     <p className="font-medium">{p.name}</p>
                     <p className="text-xs text-muted">
-                      Nicho {getNiche(p.niche).name} · {p.language} · criado em {formatDate(p.created_at)}
+                      Nicho {getNiche(p.niche).name} · {p.language} · orçamento{" "}
+                      {p.settings?.monthly_budget_usd ? `${formatUsd(p.settings.monthly_budget_usd)}/mês` : "sem limite"} · criado em{" "}
+                      {formatDate(p.created_at)}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1">

@@ -1,4 +1,4 @@
-import { hasClaudeCredential } from "./claude";
+import { claudeModel, hasClaudeCredential } from "./claude";
 import type { ConnectorInfo } from "./types";
 
 /**
@@ -23,7 +23,7 @@ export function listConnectors(): ConnectorInfo[] {
       purpose: "Pesquisa assistida, verificação, análise, estratégia, roteiro e revisão textual.",
       state: hasClaudeCredential() ? "credential_present" : "pending_credential",
       notes: hasClaudeCredential()
-        ? "Credencial presente. Modelo claude-opus-5-5 com busca na web e fallback em recusa."
+        ? `Credencial presente. Modelo ${claudeModel()} com busca na web e fallback no servidor em recusas cobertas.`
         : "Falta ANTHROPIC_API_KEY no servidor/worker. Os agentes Pesquisador e Verificador dependem dela.",
     },
     {

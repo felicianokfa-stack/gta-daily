@@ -1,6 +1,6 @@
 import { ResearchInput, ResearchResult } from "@/core/contracts/research";
 import type { AgentDefinition } from "./types";
-import { contextBlock, correctionBlock } from "./prompts";
+import { contextBlock, correctionBlock, knownSourcesBlock } from "./prompts";
 
 const SYSTEM = `Você é o Pesquisador de uma equipe de produção de conteúdo.
 Sua função: reunir fontes, datas, metadados e evidências sobre um tema e listar as alegações que precisam ser verificadas.
@@ -9,11 +9,12 @@ Regras:
 - Não trate toda fonte como confiável: prefira fontes primárias e diga quando uma informação vem só de fontes secundárias.
 - Rumores, vazamentos e teorias devem ser classificados como tal.
 - Se algo não foi encontrado, registre em "unknowns" em vez de preencher.
+- Em "relevance", estime de 0 a 100 o interesse editorial do tema para o público agora (novidade, atualidade, impacto) e justifique. Não é probabilidade de viralizar.
 - Escreva em português do Brasil.`;
 
 export const pesquisador: AgentDefinition<ResearchInput, ResearchResult> = {
   role: "pesquisador",
-  version: "pesquisador@1.0.0",
+  version: "pesquisador@1.1.0",
   description: "Reúne fontes, metadados e alegações a verificar sobre um tema.",
   inputSchema: ResearchInput,
   resultSchema: ResearchResult,
@@ -23,6 +24,7 @@ export const pesquisador: AgentDefinition<ResearchInput, ResearchResult> = {
       topic: runInput.topic,
       goal: runInput.goal ?? "",
       niche_id: runInput.niche_id,
+      known_sources: runInput.known_sources ?? [],
       correction_notes: [],
     });
   },
@@ -34,13 +36,13 @@ export const pesquisador: AgentDefinition<ResearchInput, ResearchResult> = {
 Tema: ${input.topic}
 Objetivo editorial: ${input.goal || "não informado"}
 Reúna as fontes mais relevantes e atuais, resuma o que se sabe e liste as alegações que o Verificador deve checar.
-</tarefa>${correctionBlock(input.correction_notes)}`;
+</tarefa>${knownSourcesBlock(input.known_sources)}${correctionBlock(input.correction_notes)}`;
 
     const response = await ctx.provider.generateStructured({
       system: SYSTEM,
       prompt,
       schema: ResearchResult,
-      effort: "medium",
+      effort: "low",
       webSearch: { maxUses: 6 },
     });
     return { raw: response.data, retrievedSources: response.retrievedSources, usage: response.usage };

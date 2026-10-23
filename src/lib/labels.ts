@@ -51,6 +51,8 @@ export const ERROR_ACTION: Record<string, string> = {
   refusal: "O modelo recusou a tarefa. Reformule o tema.",
   bad_request: "Requisição rejeitada pelo provedor. Veja o detalhe técnico.",
   invalid_input: "A entrada desta etapa está fora do contrato. Crie uma nova execução.",
+  budget_exceeded: "O orçamento mensal do projeto foi atingido. Aumente o orçamento em Projetos (ou aguarde o próximo mês) e clique em “Tentar de novo”.",
+  advance_failed: "A etapa foi salva, mas o avanço do pipeline falhou. Veja o detalhe técnico e crie uma nova execução.",
 };
 
 export const PLATFORM_LABEL: Record<string, string> = {
@@ -74,4 +76,40 @@ export const AUDIT_LABEL: Record<string, string> = {
   "task.action_required": "Exige ação",
   "task.retry_requested": "Nova tentativa solicitada",
   "task.lease_lost": "Lease perdido (resultado descartado)",
+  "run.materialized": "Fontes e oportunidade registradas",
+  "run.advance_failed": "Falha ao avançar o pipeline",
+  "opportunity.decided": "Decisão sobre a oportunidade",
+};
+
+export const OPPORTUNITY_STATUS: Record<string, { label: string; tone: Tone; help: string }> = {
+  pronta_para_estrategia: { label: "Pronta para estratégia", tone: "success", help: "Passou no portão de qualidade (ou foi liberada por você)." },
+  nova: { label: "Precisa de mais verificação", tone: "warning", help: "Não passou no portão de qualidade. Veja os motivos." },
+  descartada: { label: "Descartada", tone: "neutral", help: "Você decidiu não seguir com este tema." },
+};
+
+export const VERIFICATION_STATE: Record<string, { label: string; tone: Tone }> = {
+  verificada: { label: "Verificada", tone: "success" },
+  parcial: { label: "Parcialmente verificada", tone: "warning" },
+  nao_verificada: { label: "Não verificada", tone: "danger" },
+};
+
+export const PRIORITY: Record<string, { label: string; tone: Tone }> = {
+  alta: { label: "Prioridade alta", tone: "info" },
+  media: { label: "Prioridade média", tone: "neutral" },
+  baixa: { label: "Prioridade baixa", tone: "neutral" },
+};
+
+export const EVIDENCE_LABEL: Record<string, { label: string; tone: Tone }> = {
+  fato_confirmado: { label: "Fato confirmado", tone: "success" },
+  rumor: { label: "Rumor", tone: "warning" },
+  teoria: { label: "Teoria", tone: "warning" },
+  estimativa: { label: "Estimativa", tone: "info" },
+  hipotese: { label: "Hipótese", tone: "info" },
+  nao_verificado: { label: "Não verificado", tone: "danger" },
+};
+
+export const GATE_RULE: Record<string, string> = {
+  rastreabilidade: "Fontes rastreáveis",
+  evidencia_suficiente: "Evidência suficiente",
+  contradicoes_explicadas: "Contradições explicadas",
 };

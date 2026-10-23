@@ -6,6 +6,8 @@ export const ResearchInput = z.object({
   topic: z.string().trim().min(3).max(500),
   goal: z.string().trim().max(500).default(""),
   niche_id: z.string().min(1),
+  /** Fontes já registradas no projeto (Bloco C): o Pesquisador prioriza o que é novo. */
+  known_sources: z.array(z.object({ url: z.string(), title: z.string() })).max(20).default([]),
   correction_notes: z.array(z.string()).default([]),
 });
 export type ResearchInput = z.infer<typeof ResearchInput>;
@@ -25,6 +27,14 @@ export const ResearchResult = z.object({
     )
     .max(15),
   unknowns: z.array(z.string().max(500)).describe("O que não foi encontrado ou não pôde ser confirmado"),
+  relevance: z
+    .object({
+      score: z.number().int().min(0).max(100),
+      reason: z.string().min(1).max(500),
+    })
+    .describe(
+      "Interesse editorial estimado do tema para o público agora (novidade, atualidade, impacto). Não é probabilidade de viralizar.",
+    ),
 });
 export type ResearchResult = z.infer<typeof ResearchResult>;
 
@@ -41,6 +51,10 @@ export const VerificationResult = z.object({
       }),
     )
     .max(15),
+  additional_sources: z
+    .array(SourceRef)
+    .max(10)
+    .describe("Fontes novas encontradas pelo Verificador na busca e citadas como evidência"),
   contradictions: z.array(z.string().max(1000)),
   caveats: z.array(z.string().max(1000)),
   overall: z.string().min(1).max(1500),

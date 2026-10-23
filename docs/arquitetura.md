@@ -148,10 +148,15 @@ Migration: `supabase/migrations/20261023000001_fundacao_pipeline.sql`.
 - Botão "Processar minha fila agora": processa só as tarefas do próprio usuário.
 
 **Modelo**
-- `claude-opus-5-5`, em duas chamadas:
+- `claude-sonnet-5-5` por padrão (escolha por custo; trocável pela variável `CLAUDE_MODEL`), em duas chamadas:
   1. Pesquisa com `web_search`. As URLs são coletadas dos blocos de resultado da busca.
   2. Estruturação com *structured outputs* (schema Zod).
-- Fallback do lado do servidor ativado (`server-side-fallback-2026-07-01`, `fallbacks: "default"`): em recusa por política, a API refaz a chamada no modelo de fallback padrão.
+- Effort: Pesquisador `low`, Verificador `medium`.
+- Fallback do lado do servidor ativado (`server-side-fallback-2026-07-01`, `fallbacks: "default"`). No Sonnet 5.5 ele refaz no Sonnet 5 as recusas das categorias `cyber` e `frontier_llm`. As demais recusas viram "Exige ação" com o código `refusal`.
+
+**Reaproveitamento (atualizado no Bloco C)**
+- Só reaproveita resultados das últimas 24 h, porque o nicho é de notícias.
+- O hash ignora as fontes já conhecidas do projeto, que são só orientação ao agente.
 
 ## 6. Matriz de conectores
 
@@ -175,7 +180,7 @@ Estado também visível em **Agentes e conectores** na UI (`src/connectors/regis
 |---|---|---|---|
 | A | Diagnóstico e arquitetura | Este documento; nada sobrescrito sem justificativa | ✅ |
 | B | Fundação e orquestração | Tarefa criada, processada, validada, com falha recuperada e retomada, coberta por testes (`npm test`) | ✅ |
-| C | Pesquisa/verificação real | Com `ANTHROPIC_API_KEY`: 3 temas GTA VI reais com 100% das fontes rastreáveis (URL recuperada) e incertezas explícitas; tabelas `opportunities` e `source_media`; portão de qualidade antes da estratégia | próximo |
+| C | Pesquisa/verificação real | Com `ANTHROPIC_API_KEY`: 3 temas GTA VI reais com 100% das fontes rastreáveis (URL recuperada) e incertezas explícitas; tabelas `opportunities` e `source_records`; portão de qualidade antes da estratégia | ✅ código e testes · ⏳ validação real depende da chave |
 | D | Central de Conteúdo | Vídeo de teste **autorizado** analisado (transcrição + segmentos); cortes com início, fim e justificativa | — |
 | E | Produção e renderização | Arquivo 9:16 válido, legendas sincronizadas, reproduzível (mesma entrada → mesmo arquivo) | — |
 | F | Adaptação por plataforma | Versões editáveis Reels, TikTok e Shorts (e carrossel) vinculadas ao corte e à fonte | — |
@@ -203,3 +208,47 @@ O banco dos testes é PGlite, com as mesmas migrations e roles do Supabase.
 - **Idempotência, reaproveitamento e cancelamento:** idempotência de execução, reaproveitamento por hash, cancelamento antes e durante a execução.
 - **Isolamento:** entre usuários, no código e via RLS (`set role authenticated`). Inserts forjados e acesso `anon` são negados.
 - **Contratos:** dados incompletos são rejeitados e o hash é estável.
+
+## 8. Bloco C — Pesquisa e verificação com fontes e oportunidades
+
+**Contratos (versões 1.1.0)**
+- Pesquisador: recebe `known_sources` (até 20 fontes já registradas no projeto) e devolve `relevance { score 0–100, reason }`. É interesse editorial estimado, não probabilidade de viralizar.
+- Verificador: devolve `additional_sources`, as fontes novas que encontrou. Toda URL de evidência precisa estar entre as fontes registradas, e toda fonte adicional precisa ter sido recuperada na busca.
+
+**Dados** (`supabase/migrations/20261024000001_fontes_oportunidades.sql`)
+- `source_records`:
+  - uma linha por projeto + URL, com tipo `primaria` (domínio oficial do nicho) ou `secundaria`;
+  - campos `first_seen_run`, `last_seen_run` e `times_seen`.
+- `opportunities`:
+  - uma por execução, com tema, resumo, estado de verificação, relevância, prioridade sugerida, alegações, contradições, ressalvas, URLs e resultado do portão;
+  - status `nova`, `pronta_para_estrategia` ou `descartada`.
+- `agent_tasks.cost_usd`: custo estimado acumulado por tarefa.
+- Segurança: RLS somente leitura para o dono; escrita só pelo servidor.
+
+**Portão de qualidade** (`src/orchestrator/quality-gate.ts`)
+1. **Rastreabilidade:** toda evidência aponta para uma fonte registrada.
+2. **Evidência suficiente:** pelo menos um fato confirmado por fonte primária (`primary_domains` do nicho: rockstargames.com, take2games.com, playstation.com, xbox.com) ou por dois domínios independentes.
+3. **Contradições explicadas:** se houver contradição, precisa haver ressalva.
+
+O resultado:
+- Passou: a oportunidade fica "Pronta para estratégia".
+- Não passou: fica "Precisa de mais verificação", com os motivos visíveis.
+- Em qualquer caso, o usuário pode liberar, descartar ou reabrir. A decisão é auditada (`opportunity.decided`).
+
+**Materialização**
+- Acontece na mesma transação que conclui a execução e é idempotente.
+- Se falhar, a execução vai para "Exige ação" (`advance_failed`) em vez de ficar presa.
+
+**Custo e orçamento**
+- Custo estimado a preço de lista (`src/connectors/pricing.ts`):
+
+  | Item | Preço |
+  |---|---|
+  | Sonnet 5.5, entrada / saída | US$ 2 / 10 por milhão de tokens |
+  | Opus 5.5, entrada / saída | US$ 4 / 20 por milhão de tokens |
+  | Leitura de cache | US$ 0,20 por milhão de tokens |
+  | Escrita de cache | 1,25× o preço de entrada |
+  | Busca na web | US$ 0,01 por busca |
+
+- Cada projeto tem `monthly_budget_usd`. Ao atingir o gasto estimado do mês (UTC), a etapa seguinte para em "Exige ação" (`budget_exceeded`) **antes** de chamar o modelo.
+- Limitação: em fallback no servidor, só a tentativa que gerou a resposta entra na conta. Uma etapa que falha com erro do conector não registra custo parcial.

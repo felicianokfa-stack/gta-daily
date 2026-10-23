@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getDb } from "@/db";
 import { requireUser } from "@/lib/auth";
-import { RUN_STATUS, TASK_STATUS } from "@/lib/labels";
+import { OPPORTUNITY_STATUS, PRIORITY, RUN_STATUS, TASK_STATUS } from "@/lib/labels";
+import { formatUsd } from "@/connectors/pricing";
 import { listConnectors } from "@/connectors/registry";
-import { listRuns, queueStats } from "@/orchestrator/queries";
+import { listOpportunities, listRuns, monthSpendByProject, queueStats } from "@/orchestrator/queries";
 import { Badge, Card, Empty, PageHeader, buttonClass, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
 import { processMyQueueAction } from "../actions";
@@ -14,7 +15,13 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const user = await requireUser();
   const sql = await getDb();
-  const [stats, runs] = await Promise.all([queueStats(sql, user.id), listRuns(sql, user.id, 8)]);
+  const [stats, runs, best, spend] = await Promise.all([
+    queueStats(sql, user.id),
+    listRuns(sql, user.id, 8),
+    listOpportunities(sql, user.id, { limit: 5 }),
+    monthSpendByProject(sql, user.id),
+  ]);
+  const topOpportunities = best.filter((o) => o.status !== "descartada");
   const pendingConnectors = listConnectors().filter((c) => c.state === "pending_credential");
   const actionRequired = runs.filter((r) => r.status === "failed_action_required");
 
@@ -62,6 +69,57 @@ export default async function DashboardPage() {
           </ul>
         </Card>
       )}
+
+      <div className="mt-6 grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <Card title="Melhores oportunidades" actions={<Link href="/oportunidades" className="text-xs text-muted underline">ver todas</Link>}>
+            {topOpportunities.length === 0 ? (
+              <Empty>Nenhuma oportunidade ainda. Elas surgem quando uma pesquisa termina a verificação.</Empty>
+            ) : (
+              <ul className="divide-y divide-border">
+                {topOpportunities.map((o) => (
+                  <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                    <Link href="/oportunidades" className="min-w-0 flex-1 truncate hover:underline">
+                      {o.topic}
+                    </Link>
+                    <div className="flex shrink-0 gap-1.5">
+                      <Badge tone={PRIORITY[o.priority].tone}>{PRIORITY[o.priority].label}</Badge>
+                      <Badge tone={OPPORTUNITY_STATUS[o.status].tone}>{OPPORTUNITY_STATUS[o.status].label}</Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+        <Card title="Gasto de API no mês">
+          {spend.length === 0 ? (
+            <p className="text-sm text-muted">Nenhum projeto.</p>
+          ) : (
+            <ul className="space-y-3 text-sm">
+              {spend.map((p) => (
+                <li key={p.project_id}>
+                  <p className="flex justify-between gap-2">
+                    <span>{p.name}</span>
+                    <span className="font-medium">{formatUsd(p.spent)}</span>
+                  </p>
+                  {p.budget > 0 ? (
+                    <>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg">
+                        <div className="h-full bg-accent" style={{ width: `${Math.min(100, (p.spent / p.budget) * 100)}%` }} />
+                      </div>
+                      <p className="mt-1 text-xs text-muted">de {formatUsd(p.budget)} de orçamento</p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted">sem limite definido</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-xs text-muted">Estimativa a preço de lista, calculada pelos tokens e buscas registrados.</p>
+        </Card>
+      </div>
 
       <div className="mt-6">
         <Card title="Execuções recentes" actions={<Link href="/execucoes" className="text-xs text-muted underline">ver todas</Link>}>

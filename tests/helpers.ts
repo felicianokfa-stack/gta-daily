@@ -20,6 +20,7 @@ export async function createUser(sql: Sql, email = `${randomUUID()}@teste.local`
 }
 
 export async function createGtaProject(sql: Sql, userId: string, settings?: Record<string, number>) {
+  // settings substitui a configuração inteira do projeto (limites e orçamento).
   const project = await createProject(sql, userId, { name: "GTA DAILY", niche: "gta-vi", platforms: ["instagram_reels"] });
   if (settings) {
     await sql.query(`update content_projects set settings = $2::jsonb where id = $1`, [project.id, JSON.stringify(settings)]);
@@ -57,7 +58,7 @@ export class ScriptedProvider implements ModelProvider {
     return {
       data: step.data,
       retrievedSources: step.sources,
-      usage: [{ model: "test-double", input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 0, web_search_requests: 1 }],
+      usage: [{ model: "claude-sonnet-5-5", input_tokens: 10_000, output_tokens: 2_000, cache_read_input_tokens: 0, web_search_requests: 3 }],
     };
   }
 }
@@ -90,6 +91,7 @@ export function researchResult(overrides: Record<string, unknown> = {}) {
       { claim: "Haverá versão de PC no lançamento.", source_urls: [SRC_B.url], initial_label: "rumor" },
     ],
     unknowns: ["Data da versão de PC."],
+    relevance: { score: 80, reason: "Lançamento é o assunto mais buscado do nicho." },
     ...overrides,
   };
 }
@@ -100,6 +102,7 @@ export function verificationResult(overrides: Record<string, unknown> = {}) {
       { claim: "O jogo tem data anunciada.", label: "fato_confirmado", confidence: "alta", evidence_urls: [SRC_A.url], notes: "Fonte primária." },
       { claim: "Haverá versão de PC no lançamento.", label: "rumor", confidence: "baixa", evidence_urls: [SRC_B.url], notes: "Só fonte secundária." },
     ],
+    additional_sources: [],
     contradictions: [],
     caveats: ["Informações podem mudar."],
     overall: "Data confirmada; PC é rumor.",

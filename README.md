@@ -3,14 +3,15 @@
 Plataforma para pesquisar, verificar, produzir e distribuir conteúdo curto, começando pelo nicho **GTA VI** do Instagram GTA DAILY.
 A arquitetura completa, a matriz de conectores e o plano por blocos estão em [`docs/arquitetura.md`](docs/arquitetura.md).
 
-**Estado atual:** Bloco B, a fundação. Inclui:
+**Estado atual:** Blocos B (fundação) e C (pesquisa e verificação com fontes rastreáveis, oportunidades, portão de qualidade e orçamento de API). O modelo padrão é o Claude Sonnet 5.5. Inclui:
 - projetos;
 - execuções de pipeline com estado persistente;
 - fila de tarefas com lease, retentativas e idempotência;
 - contratos validados por schema;
 - auditoria;
 - interface em português;
-- agentes **Pesquisador** e **Verificador**.
+- agentes **Pesquisador** e **Verificador**;
+- **Oportunidades** com portão de qualidade e custo estimado por etapa, com orçamento mensal por projeto.
 
 ## Stack
 - Next.js 16 (App Router) + Tailwind
@@ -39,6 +40,7 @@ Copie `.env.example` para `.env.local`. Na Vercel, cadastre as mesmas variáveis
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | públicas | já preenchidas no `.env.example` (projeto `gta-daily-plataforma`) |
 | `DATABASE_URL` | **segredo** | Supabase → Project Settings → Database → Connection string (Transaction pooler) |
 | `ANTHROPIC_API_KEY` | **segredo** | console.anthropic.com → API Keys |
+| `CLAUDE_MODEL` | opcional | padrão `claude-sonnet-5-5`; `claude-opus-5-5` para mais qualidade (≈2× o custo) |
 | `CRON_SECRET` | **segredo** | qualquer valor aleatório longo; protege `/api/worker/tick` |
 
 As migrations ficam em `supabase/migrations/` e já foram aplicadas ao projeto Supabase.

@@ -31,6 +31,11 @@ export function ProjectForm({ niches }: { niches: { id: string; name: string; de
         Idioma
         <input name="language" defaultValue="pt-BR" maxLength={20} className={inputClass} />
       </label>
+      <label className="grid gap-1 text-sm">
+        Orçamento mensal de API (US$)
+        <input name="monthly_budget_usd" type="number" min={0} step="0.01" defaultValue={20} className={inputClass} />
+        <span className="text-xs text-muted">Ao atingir o valor estimado, as etapas param em “Exige ação”. Use 0 para sem limite.</span>
+      </label>
       <fieldset className="grid gap-1 text-sm">
         <legend className="mb-1">Plataformas de destino</legend>
         <div className="flex flex-wrap gap-3">

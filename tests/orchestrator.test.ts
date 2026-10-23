@@ -76,6 +76,7 @@ describe("fluxo ponta a ponta", () => {
       "task.enqueued",
       "task.claimed",
       "task.succeeded",
+      "run.materialized",
       "run.succeeded",
     ]);
   });
@@ -233,6 +234,22 @@ describe("idempotência, reaproveitamento e cancelamento", () => {
     expect(await runStatus(sql, run.id)).toBe("succeeded");
     const tasks = await taskRows(sql, run.id);
     expect(tasks.every((t) => t.reused_from)).toBe(true);
+  });
+
+  it("não reaproveita resultado com mais de 24 h (o nicho é de notícias)", async () => {
+    const provider = new ScriptedProvider()
+      .ok(researchResult(), [SRC_A, SRC_B])
+      .ok(verificationResult())
+      .ok(researchResult(), [SRC_A, SRC_B])
+      .ok(verificationResult());
+    const orch = orchestrator(sql, provider);
+    await orch.createRun({ userId, projectId, pipeline: "pesquisa_verificacao", input });
+    await orch.drain();
+    await sql.query(`update agent_tasks set finished_at = now() - interval '25 hours'`);
+
+    await orch.createRun({ userId, projectId, pipeline: "pesquisa_verificacao", input });
+    expect((await orch.drain()).map((r) => r.outcome)).toEqual(["succeeded", "succeeded"]);
+    expect(provider.calls).toHaveLength(4);
   });
 
   it("cancelamento interrompe a execução e a fila ignora as tarefas pendentes", async () => {

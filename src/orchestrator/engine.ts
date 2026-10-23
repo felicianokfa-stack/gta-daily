@@ -3,14 +3,18 @@ import { agentOutputEnvelope, type AgentRole } from "@/core/contracts/common";
 import { getNiche } from "@/core/niches";
 import { getAgent } from "@/agents/registry";
 import { ConnectorError, type ModelProvider, type ModelUsage } from "@/connectors/types";
+import { estimateCost } from "@/connectors/pricing";
 import { json, type Sql } from "@/db/sql";
 import { inputHash } from "./hash";
 import { getPipeline } from "./pipelines";
-import type { ProcessOutcome, ProjectRow, RunRow, TaskRow } from "./types";
+import type { OpportunityRow, ProcessOutcome, ProjectRow, RunRow, TaskRow } from "./types";
 
 export const DEFAULT_MAX_ATTEMPTS = 4;
 export const DEFAULT_MAX_CORRECTIONS = 2;
 const MAX_BACKOFF_SECONDS = 300;
+const KNOWN_SOURCES_LIMIT = 20;
+/** Resultados reaproveitáveis só dentro desta janela: o nicho é de notícias e envelhece rápido. */
+const REUSE_WINDOW_HOURS = 24;
 
 export interface OrchestratorOptions {
   sql: Sql;
@@ -55,7 +59,11 @@ export class Orchestrator {
   async createRun(params: CreateRunParams): Promise<{ run: RunRow; created: boolean }> {
     const pipeline = getPipeline(params.pipeline);
     const project = await this.getOwnedProject(params.userId, params.projectId);
-    const runInput = { ...params.input, niche_id: project.niche };
+    const knownSources = await this.sql.query<{ url: string; title: string }>(
+      `select url, title from source_records where project_id = $1 order by updated_at desc limit ${KNOWN_SOURCES_LIMIT}`,
+      [project.id],
+    );
+    const runInput = { ...params.input, niche_id: project.niche, known_sources: knownSources };
     // Valida a entrada da primeira etapa antes de aceitar a execução.
     const firstAgent = getAgent(pipeline.steps[0]);
     const firstInput = firstAgent.buildInput(runInput, {});
@@ -185,12 +193,13 @@ export class Orchestrator {
     }
     const input = parsedInput.data as Record<string, unknown>;
 
-    // Reaproveita resultado válido com a mesma entrada e versão do agente (mesmo dono).
+    // Reaproveita resultado válido e recente com a mesma entrada e versão do agente (mesmo dono).
     if (task.corrections === 0) {
       const [cached] = await this.sql.query<TaskRow>(
         `select * from agent_tasks
           where status = 'succeeded' and agent_role = $1 and agent_version = $2 and input_hash = $3
             and owner_id = $4 and id <> $5
+            and finished_at > now() - interval '${REUSE_WINDOW_HOURS} hours'
           order by finished_at desc limit 1`,
         [task.agent_role, task.agent_version, task.input_hash, task.owner_id, task.id],
       );
@@ -201,6 +210,21 @@ export class Orchestrator {
         await this.audit(this.sql, run, task.id, this.workerId, "task.reused", { from_task: cached.id });
         await this.advance(run, project, task, (cached.output as { result: unknown }).result);
         return "reused";
+      }
+    }
+
+    // Orçamento mensal do projeto (custo estimado a preço de lista).
+    const budget = Number(project.settings?.monthly_budget_usd ?? 0);
+    if (budget > 0) {
+      const spent = await this.monthSpend(project.id);
+      if (spent >= budget) {
+        return this.requireAction(
+          task,
+          run,
+          "budget_exceeded",
+          `Orçamento mensal do projeto atingido (gasto estimado US$ ${spent.toFixed(2)} de US$ ${budget.toFixed(2)}).`,
+          { spent_usd: spent, budget_usd: budget },
+        );
       }
     }
 
@@ -258,6 +282,7 @@ export class Orchestrator {
     await this.audit(this.sql, run, task.id, this.workerId, "task.succeeded", {
       warnings: business.warnings,
       usage: output.usage,
+      cost_usd: estimateCost(output.usage).usd,
       duration_ms: Date.now() - startedAt,
     });
     await this.advance(run, project, task, parsed.data);
@@ -265,13 +290,34 @@ export class Orchestrator {
   }
 
   private async advance(run: RunRow, project: ProjectRow, task: TaskRow, result: unknown): Promise<void> {
+    try {
+      await this.advanceInTransaction(run, project, task, result);
+    } catch (error) {
+      // A etapa já foi validada e salva; só o avanço falhou. A execução não pode ficar presa em "em andamento".
+      const info = { code: "advance_failed", message: error instanceof Error ? error.message : String(error), task_id: task.id };
+      await this.sql.query(
+        `update pipeline_runs set status = 'failed_action_required', error = $2::jsonb, updated_at = now()
+          where id = $1 and status <> 'cancelled'`,
+        [run.id, json(info)],
+      );
+      await this.audit(this.sql, run, task.id, this.workerId, "run.advance_failed", info);
+    }
+  }
+
+  private async advanceInTransaction(run: RunRow, project: ProjectRow, task: TaskRow, result: unknown): Promise<void> {
     const pipeline = getPipeline(run.pipeline);
     const nextRole = pipeline.steps[task.step_index + 1];
     await this.sql.transaction(async (tx) => {
       // Trava a execução: se foi cancelada enquanto o agente rodava, não avança.
       const [current] = await tx.query<{ status: string }>(`select status from pipeline_runs where id = $1 for update`, [run.id]);
       if (current?.status === "cancelled") return;
+      const previous = await this.previousResults(tx, run.id);
+      previous[task.agent_role] = result;
       if (!nextRole) {
+        if (pipeline.onSucceeded) {
+          const summary = await pipeline.onSucceeded(tx, run, project, previous);
+          await this.audit(tx, run, null, "orquestrador", "run.materialized", summary);
+        }
         await tx.query(
           `update pipeline_runs set status = 'succeeded', current_step = $2, finished_at = now(), updated_at = now(), error = null
             where id = $1 and status <> 'cancelled'`,
@@ -280,8 +326,6 @@ export class Orchestrator {
         await this.audit(tx, run, null, "orquestrador", "run.succeeded", {});
         return;
       }
-      const previous = await this.previousResults(tx, run.id);
-      previous[task.agent_role] = result;
       const nextInput = getAgent(nextRole).buildInput(run.input, previous);
       await tx.query(
         `update pipeline_runs set status = 'running', current_step = $2, updated_at = now() where id = $1 and status <> 'cancelled'`,
@@ -317,10 +361,10 @@ export class Orchestrator {
     // Devolve ao mesmo agente com as correções específicas (sem backoff: o erro não é de infraestrutura).
     const rows = await this.sql.query(
       `update agent_tasks set status = 'queued', corrections = $3, input = $4::jsonb, validation = $5::jsonb,
-              usage = coalesce(usage, '[]'::jsonb) || $6::jsonb, lease_owner = null, lease_expires_at = null,
-              not_before = now(), updated_at = now()
+              usage = coalesce(usage, '[]'::jsonb) || $6::jsonb, cost_usd = cost_usd + $7, lease_owner = null,
+              lease_expires_at = null, not_before = now(), updated_at = now()
         where id = $1 and lease_owner = $2 and status = 'running' returning id`,
-      [task.id, this.workerId, corrections, json({ ...input, correction_notes: errors }), json(validation), json(usage)],
+      [task.id, this.workerId, corrections, json({ ...input, correction_notes: errors }), json(validation), json(usage), estimateCost(usage).usd],
     );
     if (rows.length === 0) return this.leaseLost(task, run);
     await this.audit(this.sql, run, task.id, this.workerId, "task.validation_failed", { errors, correction: corrections });
@@ -397,10 +441,10 @@ export class Orchestrator {
   ): Promise<boolean> {
     const rows = await this.sql.query(
       `update agent_tasks set status = 'succeeded', output = $3::jsonb, validation = $4::jsonb,
-              usage = coalesce(usage, '[]'::jsonb) || $5::jsonb, error = null, reused_from = $6,
+              usage = coalesce(usage, '[]'::jsonb) || $5::jsonb, cost_usd = cost_usd + $8, error = null, reused_from = $6,
               lease_owner = null, lease_expires_at = null, finished_at = now(), duration_ms = $7, updated_at = now()
         where id = $1 and lease_owner = $2 and status = 'running' returning id`,
-      [task.id, this.workerId, json(output), json(validation), json(usage), reusedFrom, Date.now() - startedAt],
+      [task.id, this.workerId, json(output), json(validation), json(usage), reusedFrom, Date.now() - startedAt, estimateCost(usage).usd],
     );
     return rows.length > 0;
   }
@@ -452,6 +496,39 @@ export class Orchestrator {
       await tx.query(`update pipeline_runs set status = 'running', error = null, updated_at = now() where id = $1`, [run.id]);
       await this.audit(tx, run, task.id, "user", "task.retry_requested", {});
     });
+  }
+
+  /** Decisão humana sobre uma oportunidade (descartar, marcar pronta ou reabrir), com auditoria. */
+  async decideOpportunity(userId: string, opportunityId: string, status: OpportunityRow["status"]): Promise<void> {
+    const [opp] = await this.sql.query<OpportunityRow>(`select * from opportunities where id = $1 and owner_id = $2`, [
+      opportunityId,
+      userId,
+    ]);
+    if (!opp) throw new NotFoundError("Oportunidade não encontrada.");
+    if (opp.status === status) return;
+    const run = await this.getOwnedRun(userId, opp.run_id);
+    await this.sql.transaction(async (tx) => {
+      await tx.query(
+        `update opportunities set status = $2, decided_by = 'user', decided_at = now(), updated_at = now() where id = $1`,
+        [opp.id, status],
+      );
+      await this.audit(tx, run, null, "user", "opportunity.decided", {
+        opportunity_id: opp.id,
+        from: opp.status,
+        to: status,
+        quality_gate_passed: opp.quality_gate.passed,
+      });
+    });
+  }
+
+  /** Custo estimado do mês corrente (UTC) de um projeto. */
+  async monthSpend(projectId: string): Promise<number> {
+    const [row] = await this.sql.query<{ total: string }>(
+      `select coalesce(sum(cost_usd), 0)::text as total from agent_tasks
+        where project_id = $1 and created_at >= date_trunc('month', now())`,
+      [projectId],
+    );
+    return Number(row.total);
   }
 
   // ------------------------------------------------------------------ util

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { AUDIT_LABEL, ERROR_ACTION, ROLE_LABEL, RUN_STATUS, TASK_STATUS } from "@/lib/labels";
-import { getRunDetail } from "@/orchestrator/queries";
+import { getOpportunityByRun, getRunDetail } from "@/orchestrator/queries";
+import { formatUsd } from "@/connectors/pricing";
 import type { TaskRow } from "@/orchestrator/types";
 import { Badge, Card, Empty, PageHeader, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
@@ -57,6 +58,10 @@ function TaskCard({ task, runId }: { task: TaskRow; runId: string }) {
           <dd>
             {task.corrections} de {task.max_corrections}
           </dd>
+        </div>
+        <div>
+          <dt className="text-muted">Custo estimado</dt>
+          <dd>{formatUsd(task.cost_usd)}</dd>
         </div>
         <div>
           <dt className="text-muted">Duração</dt>
@@ -139,9 +144,12 @@ export default async function ExecucaoPage({ params }: PageProps<"/execucoes/[id
   const { id } = await params;
   const user = await requireUser();
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const detail = await getRunDetail(await getDb(), user.id, id);
+  const sql = await getDb();
+  const detail = await getRunDetail(sql, user.id, id);
   if (!detail) notFound();
   const { run, tasks, audit } = detail;
+  const opportunity = await getOpportunityByRun(sql, user.id, run.id);
+  const totalCost = tasks.reduce((sum, t) => sum + Number(t.cost_usd), 0);
   const status = RUN_STATUS[run.status];
   const active = run.status === "queued" || run.status === "running";
   const finished = run.status === "succeeded" || run.status === "cancelled";
@@ -169,6 +177,12 @@ export default async function ExecucaoPage({ params }: PageProps<"/execucoes/[id
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Badge tone={status.tone}>{status.label}</Badge>
         {run.goal && <span className="text-sm text-muted">Objetivo: {run.goal}</span>}
+        <span className="text-sm text-muted">Custo estimado: {formatUsd(totalCost)}</span>
+        {opportunity && (
+          <Link href="/oportunidades" className="text-sm underline">
+            ver oportunidade gerada
+          </Link>
+        )}
         <AutoRefresh active={active} />
         <Link href="/execucoes" className="ml-auto text-xs text-muted underline">
           voltar ao histórico

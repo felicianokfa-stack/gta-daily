@@ -9,8 +9,13 @@ import {
   type StructuredResponse,
 } from "./types";
 
-export const CLAUDE_MODEL = "claude-opus-5-5";
-// Em recusa por política, a API refaz a requisição no modelo de fallback padrão (opt-in).
+/** Modelo padrão: Claude Sonnet 5.5 (escolhido pelo custo). Pode ser trocado por CLAUDE_MODEL. */
+export const DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5";
+
+export function claudeModel(): string {
+  return process.env.CLAUDE_MODEL || DEFAULT_CLAUDE_MODEL;
+}
+// Em recusa por política (categorias cobertas pelo modelo), a API refaz a requisição no modelo de fallback padrão (opt-in).
 const FALLBACK_BETA = "server-side-fallback-2026-07-01";
 const MAX_PAUSE_CONTINUATIONS = 4;
 
@@ -61,7 +66,7 @@ export class ClaudeProvider implements ModelProvider {
 
     const response = await this.call(() =>
       this.client.beta.messages.parse({
-        model: CLAUDE_MODEL,
+        model: claudeModel(),
         max_tokens: 16000,
         betas: [FALLBACK_BETA],
         fallbacks: "default",
@@ -92,7 +97,7 @@ export class ClaudeProvider implements ModelProvider {
     for (let i = 0; i <= MAX_PAUSE_CONTINUATIONS; i++) {
       const response = await this.call(() =>
         this.client.beta.messages.create({
-          model: CLAUDE_MODEL,
+          model: claudeModel(),
           max_tokens: 16000,
           betas: [FALLBACK_BETA],
           fallbacks: "default",
@@ -160,6 +165,7 @@ function toUsage(model: string, u: Anthropic.Beta.BetaUsage): ModelUsage {
     input_tokens: u.input_tokens,
     output_tokens: u.output_tokens,
     cache_read_input_tokens: u.cache_read_input_tokens ?? 0,
+    cache_creation_input_tokens: u.cache_creation_input_tokens ?? 0,
     web_search_requests: u.server_tool_use?.web_search_requests ?? 0,
   };
 }

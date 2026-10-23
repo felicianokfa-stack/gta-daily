@@ -26,3 +26,10 @@ export function correctionBlock(notes: string[]): string {
     .map((n) => `- ${n}`)
     .join("\n")}\n</correcoes_exigidas>`;
 }
+
+export function knownSourcesBlock(sources: { url: string; title: string }[]): string {
+  if (!sources.length) return "";
+  return `\n\n<fontes_ja_conhecidas>\nO projeto já registrou estas fontes em pesquisas anteriores. Priorize informações novas; para citar uma delas, ela precisa aparecer de novo na sua busca.\n${sources
+    .map((s) => `- ${s.title} | ${s.url}`)
+    .join("\n")}\n</fontes_ja_conhecidas>`;
+}

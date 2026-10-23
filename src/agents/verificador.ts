@@ -18,12 +18,13 @@ Regras:
 - Só use fato_confirmado quando houver fonte primária ou várias fontes independentes e confiáveis concordando.
 - Nunca transforme rumor em fato nem esconda a ausência de evidência.
 - Cite apenas URLs das fontes recebidas ou das que você encontrar na busca. Nunca invente URLs.
+- Toda fonte nova que você citar como evidência deve constar em "additional_sources".
 - Aponte contradições entre fontes e informações possivelmente desatualizadas.
 - Escreva em português do Brasil.`;
 
 export const verificador: AgentDefinition<VerificationInput, VerificationResult> = {
   role: "verificador",
-  version: "verificador@1.0.0",
+  version: "verificador@1.1.0",
   description: "Classifica alegações (fato, rumor, teoria…) e aponta contradições e ressalvas.",
   inputSchema: VerificationInput,
   resultSchema: VerificationResult,
@@ -58,7 +59,7 @@ Verifique cada alegação, procurando confirmação independente quando necessá
       system: SYSTEM,
       prompt,
       schema: VerificationResult,
-      effort: "high",
+      effort: "medium",
       webSearch: { maxUses: 6 },
     });
     return { raw: response.data, retrievedSources: response.retrievedSources, usage: response.usage };
@@ -67,12 +68,17 @@ Verifique cada alegação, procurando confirmação independente quando necessá
   validate(input, result, retrieved) {
     const errors: string[] = [];
     const warnings: string[] = [];
-    const known = new Set([...input.research.sources.map((s) => s.url), ...retrieved.map((s) => s.url)]);
+    const retrievedUrls = new Set(retrieved.map((s) => s.url));
+    for (const s of result.additional_sources) {
+      if (!retrievedUrls.has(s.url)) errors.push(`Fonte adicional não recuperada na busca (possível URL inventada): ${s.url}`);
+    }
+    // Toda evidência precisa estar registrada como fonte (do Pesquisador ou adicional) para ser rastreável.
+    const known = new Set([...input.research.sources.map((s) => s.url), ...result.additional_sources.map((s) => s.url)]);
     const evidence = new Set<string>();
 
     for (const c of result.claims) {
       for (const url of c.evidence_urls) {
-        if (!known.has(url)) errors.push(`Evidência com URL desconhecida (possível URL inventada): ${url}`);
+        if (!known.has(url)) errors.push(`Evidência com URL fora das fontes registradas (inclua em additional_sources se veio da busca): ${url}`);
         evidence.add(url);
       }
       if (c.label === "fato_confirmado" && c.evidence_urls.length === 0) {
