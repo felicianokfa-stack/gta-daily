@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
@@ -135,9 +136,13 @@ export async function signInAction(_prev: ActionState, form: FormData): Promise<
   if (!parsed.success) return failure(parsed.error);
   const supabase = await createSupabaseServerClient();
   const intent = form.get("intent");
+  const origin = (await headers()).get("origin");
   const { error } =
     intent === "signup"
-      ? await supabase.auth.signUp(parsed.data)
+      ? await supabase.auth.signUp({
+          ...parsed.data,
+          options: origin ? { emailRedirectTo: `${origin}/auth/callback` } : undefined,
+        })
       : await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { ok: false, message: error.message };
   if (intent === "signup") return { ok: true, message: "Conta criada. Se o Supabase pedir, confirme o e-mail e depois entre." };
