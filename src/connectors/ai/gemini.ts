@@ -18,8 +18,8 @@ import {
 
 /**
  * Adaptador da API oficial do Google Gemini (REST `generateContent`, chave em header, só no servidor/worker).
- * O modelo padrão é uma suposição conservadora: confirme em https://ai.google.dev/gemini-api/docs/models quais
- * modelos têm plano gratuito e troque por GEMINI_MODEL se necessário. Os limites do plano gratuito mudam e são
+ * O modelo padrão é uma suposição e JÁ se mostrou indisponível para contas novas (404 em generateContent, mesmo
+ * existindo em models.get): use "Testar conexão" para listar os modelos da sua chave e defina GEMINI_MODEL. Os limites do plano gratuito mudam e são
  * por projeto do Google: confira os valores atuais no AI Studio (os números daqui não são garantidos).
  */
 export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
@@ -208,36 +208,102 @@ export class GeminiProvider implements ModelProvider {
       return new ConnectorError("rate_limited", "Limite de requisições do Gemini atingido.", true, { retry_after_seconds: retryAfter });
     }
     if (res.status >= 500) return new ConnectorError("unavailable", `Gemini indisponível (${res.status}).`, true);
+    if (res.status === 404) {
+      return new ConnectorError(
+        "bad_request",
+        `Modelo ${this.model} indisponível para esta chave (404). Em Configurações, "Testar conexão" lista os modelos que a chave pode usar; defina um deles em GEMINI_MODEL. Resposta da API: ${message}`,
+        false,
+        { model: this.model },
+      );
+    }
     return new ConnectorError("bad_request", `Requisição inválida ao Gemini (${res.status}): ${message}`, false);
   }
 }
 
 export interface ConnectionTestResult {
   ok: boolean;
-  code: "ok" | "pending_credential" | "authentication" | "bad_request" | "unavailable";
+  code: "ok" | "pending_credential" | "authentication" | "bad_request" | "rate_limited" | "quota_exhausted" | "unavailable";
   message: string;
   model: string;
+  /** Modelos que aceitam generateContent para esta chave (priorizando flash/lite). Vazio se não foi possível listar. */
+  models: string[];
 }
 
-/** Valida credencial e modelo consultando os metadados do modelo (não consome cota de geração). */
+const MAX_LISTED_MODELS = 12;
+
+/**
+ * Valida a credencial E o uso real do modelo: consultar só os metadados (`models.get`) não basta, porque um modelo
+ * pode existir na listagem e ser recusado em `generateContent` (ex.: "não está mais disponível para novos usuários").
+ * Faz UMA geração mínima (poucos tokens, 1 requisição do plano gratuito) e lista os modelos que a chave pode usar.
+ */
 export async function testGeminiConnection(opts: { fetch?: FetchLike } = {}): Promise<ConnectionTestResult> {
   const model = geminiModel();
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { ok: false, code: "pending_credential", message: "GEMINI_API_KEY não configurada.", model };
+  if (!apiKey) return { ok: false, code: "pending_credential", message: "GEMINI_API_KEY não configurada.", model, models: [] };
   const base = (process.env.GEMINI_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   const doFetch: FetchLike = opts.fetch ?? ((input, init) => fetch(input, init));
+  const headers = { "x-goog-api-key": apiKey };
+  const net = (error: unknown) =>
+    ({
+      ok: false,
+      code: "unavailable",
+      message: redactSecrets(`Falha de rede: ${error instanceof Error ? error.message : String(error)}`),
+      model,
+      models: [],
+    }) satisfies ConnectionTestResult;
+
+  // 1) Lista os modelos utilizáveis (também serve para validar a chave).
+  let models: string[] = [];
   try {
-    const res = await doFetch(`${base}/v1beta/models/${encodeURIComponent(model)}`, {
-      headers: { "x-goog-api-key": apiKey },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (res.ok) return { ok: true, code: "ok", message: `Credencial aceita e modelo ${model} disponível.`, model };
+    const res = await doFetch(`${base}/v1beta/models?pageSize=200`, { headers, signal: AbortSignal.timeout(15_000) });
     if (res.status === 401 || res.status === 403 || res.status === 400) {
-      return { ok: false, code: "authentication", message: `Credencial recusada (${res.status}).`, model };
+      return { ok: false, code: "authentication", message: `Credencial recusada (${res.status}).`, model, models: [] };
     }
-    if (res.status === 404) return { ok: false, code: "bad_request", message: `Modelo ${model} não encontrado: ajuste GEMINI_MODEL.`, model };
-    return { ok: false, code: "unavailable", message: `Gemini respondeu ${res.status}.`, model };
+    if (res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { models?: { name?: string; supportedGenerationMethods?: string[] }[] };
+      const usable = (body.models ?? [])
+        .filter((m) => m.name && (m.supportedGenerationMethods ?? []).includes("generateContent"))
+        .map((m) => m.name!.replace(/^models\//, ""))
+        .filter((n) => n.startsWith("gemini"));
+      const rank = (n: string) => (/flash/.test(n) ? 0 : /lite/.test(n) ? 1 : 2);
+      models = [...new Set(usable)].sort((a, b) => rank(a) - rank(b) || b.localeCompare(a)).slice(0, MAX_LISTED_MODELS);
+    }
   } catch (error) {
-    return { ok: false, code: "unavailable", message: redactSecrets(`Falha de rede: ${error instanceof Error ? error.message : String(error)}`), model };
+    return net(error);
+  }
+
+  // 2) Geração mínima com o modelo configurado.
+  try {
+    const res = await doFetch(`${base}/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "Responda apenas: ok" }] }],
+        generationConfig: { maxOutputTokens: 16, temperature: 0 },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (res.ok) {
+      return { ok: true, code: "ok", message: `Credencial aceita e o modelo ${model} respondeu a uma geração mínima.`, model, models };
+    }
+    const err = (await res.json().catch(() => ({}))) as GeminiErrorBody;
+    const detail = redactSecrets(err.error?.message ?? res.statusText ?? "");
+    const hint = models.length ? ` Modelos disponíveis para esta chave: ${models.join(", ")}.` : "";
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, code: "authentication", message: `Credencial recusada (${res.status}).`, model, models };
+    }
+    if (res.status === 404) {
+      return { ok: false, code: "bad_request", message: `O modelo ${model} não pode ser usado por esta chave (404). Defina GEMINI_MODEL com outro modelo.${hint} Resposta da API: ${detail}`, model, models };
+    }
+    if (res.status === 429) {
+      const perDay = (err.error?.details ?? []).flatMap((d) => d.violations ?? []).some((v) => /perday/i.test(v.quotaId ?? ""));
+      return perDay
+        ? { ok: false, code: "quota_exhausted", message: "Limite diário do plano gratuito esgotado. Aguarde a renovação ou use o modo de demonstração.", model, models }
+        : { ok: false, code: "rate_limited", message: "Limite por minuto atingido; a credencial está válida. Tente de novo em instantes.", model, models };
+    }
+    if (res.status >= 500) return { ok: false, code: "unavailable", message: `Gemini respondeu ${res.status}.`, model, models };
+    return { ok: false, code: "bad_request", message: `Requisição recusada (${res.status}): ${detail}${hint}`, model, models };
+  } catch (error) {
+    return { ...net(error), models };
   }
 }

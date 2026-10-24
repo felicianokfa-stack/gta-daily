@@ -13,7 +13,7 @@ import { setProjectProviderAction, testProviderConnectionAction } from "../../ac
 export const dynamic = "force-dynamic";
 
 interface TestRow {
-  data: { provider?: string; ok?: boolean; message?: string };
+  data: { provider?: string; ok?: boolean; message?: string; models?: string[] };
   created_at: Date;
 }
 
@@ -127,6 +127,9 @@ export default async function ConfiguracoesPage() {
                   </div>
                 </dl>
                 {test && !test.data.ok && test.data.message && <p className="mb-3 text-xs text-rose-600 dark:text-rose-400">{test.data.message}</p>}
+                {test?.data.models && test.data.models.length > 0 && (
+                  <p className="mb-3 text-xs text-muted">Modelos que esta chave pode usar: {test.data.models.join(", ")}</p>
+                )}
                 <ul className="ml-4 list-disc space-y-1 text-xs text-muted">
                   {p.limits.map((l) => (
                     <li key={l}>{l}</li>
