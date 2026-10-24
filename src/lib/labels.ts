@@ -26,6 +26,7 @@ export const CONNECTOR_STATE: Record<ConnectorState, { label: string; tone: Tone
   connected: { label: "Conectado", tone: "success" },
   credential_present: { label: "Credencial presente", tone: "info" },
   pending_credential: { label: "Falta credencial", tone: "warning" },
+  demo: { label: "Demonstração", tone: "warning" },
   needs_validation: { label: "Precisa validar", tone: "neutral" },
   not_supported: { label: "Não suportado", tone: "danger" },
 };
@@ -44,8 +45,12 @@ export const ROLE_LABEL: Record<string, string> = {
 
 /** Ação sugerida ao usuário para cada código de erro conhecido. */
 export const ERROR_ACTION: Record<string, string> = {
-  pending_credential: "Configure ANTHROPIC_API_KEY no servidor/worker e clique em “Tentar de novo”.",
-  authentication: "A credencial foi recusada. Confira a chave da Anthropic e tente de novo.",
+  pending_credential:
+    "Escolha um provedor de IA em Configurações (ou defina AI_PROVIDER) e configure a credencial dele no servidor/worker. Para testar sem custo, use o modo de demonstração. Depois clique em “Tentar de novo”.",
+  authentication: "A credencial do provedor de IA foi recusada. Confira a chave em Configurações e tente de novo.",
+  quota_exhausted:
+    "O limite gratuito do provedor acabou. Aguarde a renovação do limite ou mude manualmente para o modo de demonstração em Configurações; nada é trocado sozinho.",
+  rate_limited: "O provedor limitou as requisições. A etapa é reagendada sozinha; se persistir, aguarde alguns minutos.",
   validation_failed: "O agente não conseguiu produzir uma saída válida. Revise o tema (mais específico) e tente de novo.",
   attempts_exhausted: "Muitas tentativas sem sucesso. Verifique os conectores e tente de novo.",
   refusal: "O modelo recusou a tarefa. Reformule o tema.",

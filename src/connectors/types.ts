@@ -5,6 +5,7 @@ export type ConnectorState =
   | "connected" // credencial presente e uso validado
   | "credential_present" // credencial presente, ainda não validada nesta execução
   | "pending_credential" // falta credencial
+  | "demo" // modo de demonstração: resultados fictícios, sem credencial nem custo
   | "needs_validation" // falta validar documentação oficial / plano / limites
   | "not_supported";
 
@@ -20,6 +21,8 @@ export type ConnectorErrorCode =
   | "pending_credential"
   | "authentication"
   | "rate_limited"
+  /** Limite do plano gratuito esgotado: esperar a renovação ou trocar de provedor manualmente. Não é retentável. */
+  | "quota_exhausted"
   | "unavailable"
   | "bad_request"
   | "refusal"
@@ -39,6 +42,8 @@ export class ConnectorError extends Error {
 }
 
 export interface ModelUsage {
+  /** Provedor que atendeu a chamada (mock, gemini, ollama, anthropic). */
+  provider?: string;
   model: string;
   input_tokens: number;
   output_tokens: number;
@@ -62,6 +67,21 @@ export interface StructuredRequest<T> {
   effort: "low" | "medium" | "high";
   /** Quando presente, o provedor pesquisa na web e devolve as fontes efetivamente recuperadas. */
   webSearch?: { maxUses: number };
+  /**
+   * Fontes reais já conhecidas (registradas no projeto ou informadas pelo usuário). Provedores sem busca
+   * devolvem só estas como "recuperadas"; nunca inventam fontes.
+   */
+  knownSources?: { url: string; title: string }[];
+  /** Papel do agente e entrada estruturada: usados apenas pelo provedor de demonstração. */
+  role?: string;
+  input?: unknown;
+}
+
+export interface ProviderCapabilities {
+  /** Pesquisa na web nativa do provedor. Sem ela, só entram fontes de `knownSources`. */
+  webSearch: boolean;
+  /** Resultados fictícios: nunca podem ser tratados como achados reais. */
+  simulated: boolean;
 }
 
 export interface StructuredResponse {
@@ -73,5 +93,6 @@ export interface StructuredResponse {
 
 export interface ModelProvider {
   readonly id: string;
+  readonly capabilities?: ProviderCapabilities;
   generateStructured<T>(request: StructuredRequest<T>): Promise<StructuredResponse>;
 }

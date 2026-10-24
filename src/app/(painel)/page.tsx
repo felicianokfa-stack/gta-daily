@@ -4,7 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { OPPORTUNITY_STATUS, PRIORITY, RUN_STATUS, TASK_STATUS } from "@/lib/labels";
 import { formatUsd } from "@/connectors/pricing";
 import { listConnectors } from "@/connectors/registry";
-import { listOpportunities, listRuns, monthSpendByProject, queueStats } from "@/orchestrator/queries";
+import { resolveProviderId } from "@/connectors/ai/factory";
+import { listOpportunities, listProjects, listRuns, monthSpendByProject, queueStats } from "@/orchestrator/queries";
 import { Badge, Card, Empty, PageHeader, buttonClass, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
 import { processMyQueueAction } from "../actions";
@@ -22,7 +23,12 @@ export default async function DashboardPage() {
     monthSpendByProject(sql, user.id),
   ]);
   const topOpportunities = best.filter((o) => o.status !== "descartada");
-  const pendingConnectors = listConnectors().filter((c) => c.state === "pending_credential");
+  // Conectores opcionais (provedores de IA que não foram escolhidos, YouTube) não são pendências: o que importa
+  // é cada projeto ter um provedor de IA escolhido.
+  const pendingConnectors = listConnectors().filter(
+    (c) => c.state === "pending_credential" && !c.id.startsWith("ia_") && c.id !== "youtube",
+  );
+  const projectsWithoutProvider = (await listProjects(sql, user.id)).filter((p) => !resolveProviderId(p.settings));
   const actionRequired = runs.filter((r) => r.status === "failed_action_required");
 
   return (
@@ -50,9 +56,18 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {(actionRequired.length > 0 || pendingConnectors.length > 0) && (
+      {(actionRequired.length > 0 || pendingConnectors.length > 0 || projectsWithoutProvider.length > 0) && (
         <Card title="Precisa da sua atenção">
           <ul className="space-y-2 text-sm">
+            {projectsWithoutProvider.map((p) => (
+              <li key={p.id}>
+                <Badge tone="warning">Sem provedor de IA</Badge> {p.name} —{" "}
+                <Link href="/configuracoes" className="underline underline-offset-2">
+                  escolha um provedor em Configurações
+                </Link>{" "}
+                <span className="text-muted">(demonstração sem custo ou IA real).</span>
+              </li>
+            ))}
             {actionRequired.map((r) => (
               <li key={r.id}>
                 <Badge tone="danger">Exige ação</Badge>{" "}

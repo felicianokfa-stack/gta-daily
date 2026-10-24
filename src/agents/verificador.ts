@@ -61,6 +61,9 @@ Verifique cada alegação, procurando confirmação independente quando necessá
       schema: VerificationResult,
       effort: "medium",
       webSearch: { maxUses: 6 },
+      knownSources: input.research.sources.map((s) => ({ url: s.url, title: s.title })),
+      role: this.role,
+      input,
     });
     return { raw: response.data, retrievedSources: response.retrievedSources, usage: response.usage };
   },

@@ -31,7 +31,8 @@ export function hasClaudeCredential(): boolean {
  * para que o orquestrador possa rejeitar qualquer fonte inventada.
  */
 export class ClaudeProvider implements ModelProvider {
-  readonly id = "claude";
+  readonly id = "anthropic";
+  readonly capabilities = { webSearch: true, simulated: false } as const;
   private readonly client: Anthropic;
 
   constructor(client?: Anthropic) {
@@ -161,6 +162,7 @@ export class ClaudeProvider implements ModelProvider {
 
 function toUsage(model: string, u: Anthropic.Beta.BetaUsage): ModelUsage {
   return {
+    provider: "anthropic",
     model,
     input_tokens: u.input_tokens,
     output_tokens: u.output_tokens,

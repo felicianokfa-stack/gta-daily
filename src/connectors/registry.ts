@@ -1,5 +1,24 @@
-import { claudeModel, hasClaudeCredential } from "./claude";
-import type { ConnectorInfo } from "./types";
+import { describeProviders } from "./ai/status";
+import type { ConnectorInfo, ConnectorState } from "./types";
+
+function providerConnectors(): ConnectorInfo[] {
+  return describeProviders().map((p): ConnectorInfo => {
+    const state: ConnectorState = p.mode === "demonstracao" ? "demo" : p.configured ? "credential_present" : "pending_credential";
+    const notes =
+      p.mode === "demonstracao"
+        ? "Sempre disponível, sem custo. Resultados simulados."
+        : p.configured
+          ? `Configurado${p.model ? ` (modelo ${p.model})` : ""}; conexão ainda não testada nesta execução. Use "Testar conexão" em Configurações.`
+          : `Falta ${p.missing}. Nada é enviado a este provedor sem configuração e sem escolha explícita.`;
+    return {
+      id: `ia_${p.id}`,
+      name: `IA — ${p.label}`,
+      purpose: "Provedor de modelo dos agentes (Pesquisador, Verificador e demais).",
+      state,
+      notes,
+    };
+  });
+}
 
 /**
  * Matriz de conectores (seção 7). Estados honestos: nenhum conector aparece como
@@ -17,15 +36,7 @@ export function listConnectors(): ConnectorInfo[] {
         ? "Conectado via DATABASE_URL. Projeto gta-daily-plataforma (sa-east-1)."
         : "Em modo local (PGlite). Configure DATABASE_URL e as chaves públicas do Supabase para usar o projeto real.",
     },
-    {
-      id: "claude",
-      name: "Claude API (Anthropic)",
-      purpose: "Pesquisa assistida, verificação, análise, estratégia, roteiro e revisão textual.",
-      state: hasClaudeCredential() ? "credential_present" : "pending_credential",
-      notes: hasClaudeCredential()
-        ? `Credencial presente. Modelo ${claudeModel()} com busca na web e fallback no servidor em recusas cobertas.`
-        : "Falta ANTHROPIC_API_KEY no servidor/worker. Os agentes Pesquisador e Verificador dependem dela.",
-    },
+    ...providerConnectors(),
     {
       id: "buffer",
       name: "Buffer API",
@@ -50,9 +61,11 @@ export function listConnectors(): ConnectorInfo[] {
     {
       id: "youtube",
       name: "YouTube Data API",
-      purpose: "Metadados e legendas de vídeos autorizados.",
-      state: "pending_credential",
-      notes: "Bloco C/D. Requer credencial do Google Cloud e respeito às regras de uso.",
+      purpose: "Metadados (título, canal, datas, estatísticas) de vídeos públicos. Opcional.",
+      state: process.env.YOUTUBE_API_KEY ? "credential_present" : "pending_credential",
+      notes: process.env.YOUTUBE_API_KEY
+        ? "Credencial presente, ainda não validada. A API entrega metadados; não baixa o arquivo do vídeo nem transcreve vídeos de terceiros."
+        : "Opcional: falta YOUTUBE_API_KEY (credencial). Não bloqueia o restante: link manual, metadados informados e arquivo próprio entram na Central de Conteúdo (ainda não implementado).",
     },
     {
       id: "ffmpeg",
