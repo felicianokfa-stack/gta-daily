@@ -166,13 +166,16 @@ export async function testProviderConnectionAction(provider: string): Promise<Ac
     const id = ProviderChoice.parse(provider);
     let ok: boolean;
     let message: string;
+    let models: string[] = [];
     if (id === "mock") {
       ok = true;
       message = "Demonstração não faz chamadas de rede: sempre disponível.";
     } else if (id === "gemini") {
       const r = await testGeminiConnection();
       ok = r.ok;
-      message = r.message;
+      models = r.models;
+      message =
+        r.message + (r.ok && r.models.length ? ` Modelos disponíveis para esta chave: ${r.models.join(", ")}.` : "");
     } else if (id === "ollama") {
       const r = await testOllamaConnection();
       ok = r.ok;
@@ -186,7 +189,7 @@ export async function testProviderConnectionAction(provider: string): Promise<Ac
     }
     await (await getDb()).query(
       `insert into audit_events (owner_id, actor, action, data) values ($1, 'user', 'ai.connection_test', $2::jsonb)`,
-      [user.id, JSON.stringify({ provider: id, ok, message })],
+      [user.id, JSON.stringify({ provider: id, ok, message, models })],
     );
     revalidatePath("/configuracoes");
     return { ok, message };

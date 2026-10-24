@@ -413,11 +413,51 @@ describe("teste de conexão do Gemini", () => {
   it("sem chave", async () => {
     expect(await testGeminiConnection({ fetch: fakeFetch(() => geminiOk("{}")) })).toMatchObject({ ok: false, code: "pending_credential" });
   });
-  it("chave aceita, recusada, modelo inexistente e rede fora", async () => {
+  const listBody = JSON.stringify({
+    models: [
+      { name: "models/gemini-antigo-pro", supportedGenerationMethods: ["generateContent"] },
+      { name: "models/gemini-novo-flash", supportedGenerationMethods: ["generateContent", "countTokens"] },
+      { name: "models/gemini-novo-flash-lite", supportedGenerationMethods: ["generateContent"] },
+      { name: "models/embedding-001", supportedGenerationMethods: ["embedContent"] },
+      { name: "models/gemini-so-embeddings", supportedGenerationMethods: ["embedContent"] },
+    ],
+  });
+  /** Simula a API: lista de modelos + o resultado do generateContent. */
+  const api = (gen: () => Response, listStatus = 200) =>
+    fakeFetch((url) => (url.includes(":generateContent") ? gen() : new Response(listStatus === 200 ? listBody : "{}", { status: listStatus })));
+
+  it("chave aceita E geração mínima funcionando: ok, com os modelos utilizáveis (flash primeiro)", async () => {
     process.env.GEMINI_API_KEY = "chave-de-teste-123456789";
-    expect(await testGeminiConnection({ fetch: fakeFetch(() => new Response("{}", { status: 200 })) })).toMatchObject({ ok: true, code: "ok" });
-    expect(await testGeminiConnection({ fetch: fakeFetch(() => new Response("{}", { status: 403 })) })).toMatchObject({ ok: false, code: "authentication" });
-    expect(await testGeminiConnection({ fetch: fakeFetch(() => new Response("{}", { status: 404 })) })).toMatchObject({ ok: false, code: "bad_request" });
+    const calls: Recorded[] = [];
+    const r = await testGeminiConnection({
+      fetch: fakeFetch((url) => (url.includes(":generateContent") ? geminiOk("ok") : new Response(listBody, { status: 200 })), calls),
+    });
+    expect(r).toMatchObject({ ok: true, code: "ok" });
+    expect(r.models).toEqual(["gemini-novo-flash-lite", "gemini-novo-flash", "gemini-antigo-pro"]);
+    expect(r.models).not.toContain("embedding-001");
+    // A geração do teste é mínima: poucos tokens de saída.
+    const gen = calls.find((c) => c.url.includes(":generateContent"))!;
+    expect(JSON.parse(String(gen.init.body)).generationConfig.maxOutputTokens).toBeLessThanOrEqual(16);
+  });
+
+  it("o caso real: o modelo existe nos metadados mas generateContent devolve 404 — o teste FALHA e indica os modelos da chave", async () => {
+    process.env.GEMINI_API_KEY = "chave-de-teste-123456789";
+    const r = await testGeminiConnection({
+      fetch: api(() => geminiError(404, { error: { message: "This model is no longer available to new users." } })),
+    });
+    expect(r).toMatchObject({ ok: false, code: "bad_request" });
+    expect(r.message).toMatch(/GEMINI_MODEL/);
+    expect(r.message).toContain("gemini-novo-flash");
+    expect(r.models.length).toBeGreaterThan(0);
+  });
+
+  it("chave recusada, limite por minuto (credencial válida), cota diária e rede fora", async () => {
+    process.env.GEMINI_API_KEY = "chave-de-teste-123456789";
+    expect(await testGeminiConnection({ fetch: api(() => geminiError(403, {}), 403) })).toMatchObject({ ok: false, code: "authentication" });
+    expect(await testGeminiConnection({ fetch: api(() => geminiError(403, {})) })).toMatchObject({ ok: false, code: "authentication" });
+    expect(await testGeminiConnection({ fetch: api(() => geminiError(429, { error: { status: "RESOURCE_EXHAUSTED" } })) })).toMatchObject({ ok: false, code: "rate_limited" });
+    const perDay = { error: { details: [{ violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] }] } };
+    expect(await testGeminiConnection({ fetch: api(() => geminiError(429, perDay)) })).toMatchObject({ ok: false, code: "quota_exhausted" });
     expect(
       await testGeminiConnection({
         fetch: fakeFetch(() => {
@@ -425,6 +465,20 @@ describe("teste de conexão do Gemini", () => {
         }),
       }),
     ).toMatchObject({ ok: false, code: "unavailable" });
+  });
+
+  it("na geração real, o 404 de modelo vira erro acionável e não retentável", async () => {
+    const provider = new GeminiProvider({
+      apiKey: "chave-de-teste-123456789",
+      model: "gemini-velho",
+      maxRequestsPerMinute: 100,
+      fetch: fakeFetch(() => geminiError(404, { error: { message: "no longer available to new users" } })),
+    });
+    const err = (await provider.generateStructured(reqFor()).catch((e) => e)) as ConnectorError;
+    expect(err).toMatchObject({ code: "bad_request", retryable: false });
+    expect(err.message).toContain("gemini-velho");
+    expect(err.message).toContain("GEMINI_MODEL");
+    expect(err.message).toContain("Testar conexão");
   });
 
   // Integração REAL: só roda com GEMINI_API_KEY no ambiente. Sem a chave aparece como "ignorado", nunca como aprovado.
