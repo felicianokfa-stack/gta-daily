@@ -523,3 +523,31 @@ describe("conectores, configurações e segredos", () => {
     expect(example).toMatch(/^GEMINI_API_KEY=$/m); // sem valores reais no exemplo
   });
 });
+
+describe("adaptador do Postgres real (postgres.js)", () => {
+  it("strings JSON passam sem dupla serialização para jsonb; objetos continuam serializados", async () => {
+    const { POSTGRES_JSON_TYPE } = await import("@/db/postgres");
+    expect(POSTGRES_JSON_TYPE.serialize('{"a":1}')).toBe('{"a":1}');
+    expect(POSTGRES_JSON_TYPE.serialize({ a: 1 })).toBe('{"a":1}');
+    expect(POSTGRES_JSON_TYPE.parse('{"a":1}')).toEqual({ a: 1 });
+    // O serializador vale para json (114) e jsonb (3802), como no tipo padrão do driver.
+    expect(POSTGRES_JSON_TYPE.to).toBe(114);
+    expect(POSTGRES_JSON_TYPE.from).toEqual([114, 3802]);
+  });
+
+  it("o driver realmente usa o serializador configurado para parâmetros jsonb (sem conectar)", async () => {
+    const { default: postgres } = await import("postgres");
+    const { POSTGRES_JSON_TYPE } = await import("@/db/postgres");
+    const configured = postgres("postgres://u:p@127.0.0.1:1/db", { types: { json: POSTGRES_JSON_TYPE } });
+    const stock = postgres("postgres://u:p@127.0.0.1:1/db");
+    try {
+      // Sem o ajuste, o driver serializa de novo a string JSON (a causa do jsonb "texto dentro de JSON").
+      expect(stock.options.serializers[3802]('{"x":true}')).toBe('"{\\"x\\":true}"');
+      expect(configured.options.serializers[3802]('{"x":true}')).toBe('{"x":true}');
+      expect(configured.options.serializers[3802]({ x: true })).toBe('{"x":true}');
+    } finally {
+      await configured.end({ timeout: 0 });
+      await stock.end({ timeout: 0 });
+    }
+  });
+});
