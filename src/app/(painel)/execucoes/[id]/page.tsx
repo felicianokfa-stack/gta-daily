@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth";
 import { AUDIT_LABEL, ERROR_ACTION, ROLE_LABEL, RUN_STATUS, TASK_STATUS } from "@/lib/labels";
 import { getOpportunityByRun, getRunDetail } from "@/orchestrator/queries";
 import { formatUsd } from "@/connectors/pricing";
+import { PROVIDER_LABEL, isSimulatedProvider, type ProviderId } from "@/connectors/ai/ids";
+import { SimulatedBanner } from "@/components/simulated-banner";
 import type { TaskRow } from "@/orchestrator/types";
 import { Badge, Card, Empty, PageHeader, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
@@ -46,6 +48,13 @@ function TaskCard({ task, runId }: { task: TaskRow; runId: string }) {
         <div>
           <dt className="text-muted">Versão do agente</dt>
           <dd>{task.agent_version}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Provedor de IA</dt>
+          <dd>
+            {task.provider ? (PROVIDER_LABEL[task.provider as ProviderId] ?? task.provider) : "—"}
+            {isSimulatedProvider(task.provider) && <Badge tone="warning">simulado</Badge>}
+          </dd>
         </div>
         <div>
           <dt className="text-muted">Tentativas</dt>
@@ -174,6 +183,7 @@ export default async function ExecucaoPage({ params }: PageProps<"/execucoes/[id
           </div>
         }
       />
+      {tasks.some((t) => isSimulatedProvider(t.provider)) && <SimulatedBanner />}
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Badge tone={status.tone}>{status.label}</Badge>
         {run.goal && <span className="text-sm text-muted">Objetivo: {run.goal}</span>}

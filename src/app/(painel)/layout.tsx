@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { getDb } from "@/db";
 import { authMode, requireUser } from "@/lib/auth";
+import { resolveProviderId } from "@/connectors/ai/factory";
+import { isSimulatedProvider } from "@/connectors/ai/ids";
+import { listProjects } from "@/orchestrator/queries";
 import { signOutAction } from "../actions";
 
 const NAV = [
@@ -8,13 +12,24 @@ const NAV = [
   { href: "/execucoes", label: "Execuções" },
   { href: "/projetos", label: "Projetos" },
   { href: "/agentes", label: "Agentes e conectores" },
+  { href: "/configuracoes", label: "Configurações" },
 ];
 
 export default async function PainelLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
   const local = authMode() === "local";
+  const projects = await listProjects(await getDb(), user.id);
+  const demo = projects.some((p) => isSimulatedProvider(resolveProviderId(p.settings)));
   return (
     <div className="min-h-screen">
+      {demo && (
+        <div className="bg-amber-500/20 px-4 py-2 text-center text-xs font-medium text-amber-900 dark:text-amber-100">
+          Modo de demonstração — resultado simulado: há projetos usando o provedor de demonstração. Nada é pesquisado, verificado ou publicado de verdade.{" "}
+          <Link href="/configuracoes" className="underline">
+            Configurações
+          </Link>
+        </div>
+      )}
       {local && (
         <div className="bg-amber-500/15 px-4 py-2 text-center text-xs text-amber-800 dark:text-amber-200">
           Modo local de desenvolvimento: banco embutido (PGlite) e usuário de teste. Não use em produção.

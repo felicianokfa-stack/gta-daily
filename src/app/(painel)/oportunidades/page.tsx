@@ -6,6 +6,7 @@ import { listOpportunities, sourcesByUrl, type OpportunityListItem } from "@/orc
 import type { SourceRecordRow } from "@/orchestrator/types";
 import { Badge, Card, Empty, PageHeader, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
+import { SimulatedBanner } from "@/components/simulated-banner";
 import { decideOpportunityAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ function OpportunityCard({ opp, sources }: { opp: OpportunityListItem; sources: 
           <Badge tone={status.tone} title={status.help}>
             {status.label}
           </Badge>
+          {opp.simulated && <Badge tone="warning">Simulado</Badge>}
         </span>
       }
       actions={
@@ -46,6 +48,11 @@ function OpportunityCard({ opp, sources }: { opp: OpportunityListItem; sources: 
         <Badge tone={PRIORITY[opp.priority].tone}>{PRIORITY[opp.priority].label}</Badge>
         <Badge title="Interesse editorial estimado pelo Pesquisador (não é probabilidade de viralizar)">Relevância {opp.relevance}/100</Badge>
       </div>
+      {opp.simulated && (
+        <p className="mb-3 text-xs font-medium text-amber-700 dark:text-amber-300">
+          Modo de demonstração — resultado simulado: fontes, alegações e relevância são fictícias.
+        </p>
+      )}
       <p className="mb-1 whitespace-pre-line text-sm">{opp.summary}</p>
       <p className="mb-4 text-xs text-muted">Por que é relevante: {opp.relevance_reason}</p>
 
@@ -130,6 +137,9 @@ export default async function OportunidadesPage() {
           </Link>
         }
       />
+      {opportunities.some((o) => o.simulated) && (
+        <SimulatedBanner detail="Algumas oportunidades abaixo vieram do modo de demonstração (marcadas como “Simulado”). São fictícias e nunca viram fonte registrada." />
+      )}
       {opportunities.length === 0 ? (
         <Empty>Nenhuma oportunidade ainda. Elas aparecem quando uma pesquisa termina a verificação.</Empty>
       ) : (

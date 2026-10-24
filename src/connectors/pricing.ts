@@ -11,6 +11,7 @@ const PRICES: { prefix: string; input: number; output: number; cacheRead: number
   { prefix: "claude-opus-5-5", input: 4, output: 20, cacheRead: 0.2 },
   { prefix: "claude-opus-5", input: 5, output: 25, cacheRead: 0.5 },
 ];
+const FREE_PROVIDERS = new Set(["mock", "ollama", "gemini"]);
 /** Escrita no cache de 5 minutos custa 1,25× a entrada. */
 const CACHE_WRITE_MULTIPLIER = 1.25;
 /** Busca na web: US$ 10 por 1.000 buscas. */
@@ -26,6 +27,9 @@ export function estimateCost(usage: ModelUsage[]): CostEstimate {
   let usd = 0;
   const unpriced = new Set<string>();
   for (const u of usage) {
+    // Demonstração, modelo local e Gemini (plano gratuito) não geram custo estimado. Se a chave do Gemini
+    // pertencer a um projeto com faturamento, a cobrança real existe e NÃO entra nesta estimativa.
+    if (u.provider && FREE_PROVIDERS.has(u.provider)) continue;
     usd += u.web_search_requests * WEB_SEARCH_USD;
     const price = PRICES.find((p) => u.model === p.prefix || u.model.startsWith(`${p.prefix}-`));
     if (!price) {

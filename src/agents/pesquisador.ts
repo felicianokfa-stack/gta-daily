@@ -44,6 +44,9 @@ Reúna as fontes mais relevantes e atuais, resuma o que se sabe e liste as alega
       schema: ResearchResult,
       effort: "low",
       webSearch: { maxUses: 6 },
+      knownSources: input.known_sources,
+      role: this.role,
+      input,
     });
     return { raw: response.data, retrievedSources: response.retrievedSources, usage: response.usage };
   },

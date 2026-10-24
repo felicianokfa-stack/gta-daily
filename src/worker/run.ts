@@ -1,12 +1,12 @@
 /**
  * Worker de longa duração: consome a fila agent_tasks continuamente.
- * Uso: DATABASE_URL=... ANTHROPIC_API_KEY=... npm run worker
+ * Uso: DATABASE_URL=... AI_PROVIDER=mock|gemini|ollama|anthropic (+ credencial do provedor) npm run worker
  *
  * Pode haver vários workers ao mesmo tempo: a fila usa FOR UPDATE SKIP LOCKED + lease,
  * e uma tarefa abandonada (worker morto) é retomada quando o lease expira.
  */
 import { createPostgresSql } from "@/db/postgres";
-import { ClaudeProvider } from "@/connectors/claude";
+import { createProviderFactory } from "@/connectors/ai/factory";
 import { Orchestrator } from "@/orchestrator/engine";
 
 const IDLE_MS = Number(process.env.WORKER_IDLE_MS ?? 5000);
@@ -19,7 +19,7 @@ async function main() {
     process.exit(1);
   }
   const sql = createPostgresSql(url);
-  const orch = new Orchestrator({ sql, providerFactory: () => new ClaudeProvider() });
+  const orch = new Orchestrator({ sql, providerFactory: createProviderFactory() });
   let stopping = false;
   const stop = () => {
     console.log(`[${orch.workerId}] encerrando após a etapa atual…`);

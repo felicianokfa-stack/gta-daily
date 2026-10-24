@@ -18,8 +18,11 @@ const REUSE_WINDOW_HOURS = 24;
 
 export interface OrchestratorOptions {
   sql: Sql;
-  /** Fábrica do provedor de modelo; pode lançar ConnectorError("pending_credential"). */
-  providerFactory: () => ModelProvider;
+  /**
+   * Fábrica do provedor de modelo, chamada uma vez por tarefa com o projeto (a escolha do provedor pode vir de
+   * `project.settings.ai_provider`). Pode lançar ConnectorError("pending_credential"). Nunca há fallback entre provedores.
+   */
+  providerFactory: (ctx: { project: ProjectRow }) => ModelProvider;
   workerId?: string;
   leaseSeconds?: number;
 }
@@ -45,7 +48,7 @@ export class Orchestrator {
   readonly sql: Sql;
   readonly workerId: string;
   private readonly leaseSeconds: number;
-  private readonly providerFactory: () => ModelProvider;
+  private readonly providerFactory: OrchestratorOptions["providerFactory"];
 
   constructor(opts: OrchestratorOptions) {
     this.sql = opts.sql;
@@ -193,21 +196,31 @@ export class Orchestrator {
     }
     const input = parsedInput.data as Record<string, unknown>;
 
-    // Reaproveita resultado válido e recente com a mesma entrada e versão do agente (mesmo dono).
+    // O provedor é resolvido antes do reaproveitamento: um resultado só é reutilizado pelo MESMO provedor
+    // (nada simulado é entregue como real e vice-versa) e o provedor fica registrado na tarefa.
+    let provider: ModelProvider;
+    try {
+      provider = this.providerFactory({ project });
+    } catch (error) {
+      return this.handleRunError(task, run, error);
+    }
+    await this.sql.query(`update agent_tasks set provider = $3 where id = $1 and lease_owner = $2`, [task.id, this.workerId, provider.id]);
+
+    // Reaproveita resultado válido e recente com a mesma entrada, versão do agente e provedor (mesmo dono).
     if (task.corrections === 0) {
       const [cached] = await this.sql.query<TaskRow>(
         `select * from agent_tasks
           where status = 'succeeded' and agent_role = $1 and agent_version = $2 and input_hash = $3
-            and owner_id = $4 and id <> $5
+            and owner_id = $4 and id <> $5 and provider = $6
             and finished_at > now() - interval '${REUSE_WINDOW_HOURS} hours'
           order by finished_at desc limit 1`,
-        [task.agent_role, task.agent_version, task.input_hash, task.owner_id, task.id],
+        [task.agent_role, task.agent_version, task.input_hash, task.owner_id, task.id, provider.id],
       );
       if (cached?.output) {
         const output = { ...cached.output, task_id: task.id, run_id: run.id, project_id: run.project_id };
         const ok = await this.completeTask(task, output, cached.validation ?? {}, [], startedAt, cached.id);
         if (!ok) return this.leaseLost(task, run);
-        await this.audit(this.sql, run, task.id, this.workerId, "task.reused", { from_task: cached.id });
+        await this.audit(this.sql, run, task.id, this.workerId, "task.reused", { from_task: cached.id, provider: provider.id });
         await this.advance(run, project, task, (cached.output as { result: unknown }).result);
         return "reused";
       }
@@ -230,11 +243,12 @@ export class Orchestrator {
 
     let output;
     try {
-      const provider = this.providerFactory();
       output = await agent.run(input, { project, niche: getNiche(project.niche), provider });
     } catch (error) {
       return this.handleRunError(task, run, error);
     }
+    // Rastreabilidade: todo registro de uso informa qual provedor atendeu a chamada.
+    output.usage = output.usage.map((u) => ({ ...u, provider: u.provider ?? provider.id }));
 
     // Portão de qualidade: schema do contrato + validações de negócio do papel.
     const parsed = agent.resultSchema.safeParse(output.raw);
@@ -280,6 +294,8 @@ export class Orchestrator {
     const ok = await this.completeTask(task, envelope, envelope.validation, output.usage, startedAt, null);
     if (!ok) return this.leaseLost(task, run);
     await this.audit(this.sql, run, task.id, this.workerId, "task.succeeded", {
+      provider: provider.id,
+      simulated: provider.capabilities?.simulated ?? false,
       warnings: business.warnings,
       usage: output.usage,
       cost_usd: estimateCost(output.usage).usd,

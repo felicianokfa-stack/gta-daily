@@ -11,7 +11,7 @@ Este documento cobre as 7 entregas pedidas antes do código. O Bloco B (fundaç�
 | Instagram GTA DAILY | Conta existente; é o primeiro canal-alvo. | Plataformas do projeto: Reels e Carrossel/Foto (TikTok e Shorts opcionais). |
 | Supabase | Projeto novo `gta-daily-plataforma` (ref `lcocstithbpjtsupgsiv`, sa-east-1, plano free) na organização "Agatha". | Migration do Bloco B aplicada; advisor de segurança sem alertas. |
 | Vercel | Conector disponível na sessão, sem time listado e sem deploy. | Deploy fica para quando os segredos estiverem configurados. |
-| Claude API | Sem `ANTHROPIC_API_KEY` no ambiente. | Adaptador implementado; sem chave, as etapas param em "Exige ação" (não há execução simulada). |
+| Provedores de IA | Sem `ANTHROPIC_API_KEY`; sem conta paga. | Camada `ModelProvider` com `mock` (demonstração explícita), `gemini`, `ollama` e `anthropic`. Sem provedor escolhido, as etapas param em "Exige ação": o mock nunca é implícito e não há fallback entre provedores. |
 | Demais conectores | vidIQ e Canva existem como ferramentas do assistente, não como APIs da plataforma. | Registrados como "precisa validar". |
 
 **Riscos principais**
@@ -32,7 +32,7 @@ flowchart TD
   ORQ -->|toda transição| AUD[(audit_events)]
   ORQ --> AG["Agentes de função<br/>Pesquisador · Verificador · …"]
   NICHO["Agentes de nicho<br/>(contexto: GTA VI, …)"] -.briefing.-> AG
-  AG --> PROV["ModelProvider<br/>ClaudeProvider"]
+  AG --> PROV["ModelProvider<br/>mock · gemini · ollama · anthropic<br/>(escolha por projeto/AI_PROVIDER)"]
   AG --> CON["Adaptadores de conectores<br/>(Buffer, OpusClip, FFmpeg… — próximos blocos)"]
   ORQ --> VAL{"Validação<br/>schema Zod + regras de negócio"}
   VAL -->|ok| NEXT[Próxima etapa ou fim]
@@ -165,7 +165,11 @@ Estado também visível em **Agentes e conectores** na UI (`src/connectors/regis
 | Conector | Classificação | Validado neste bloco | Falta |
 |---|---|---|---|
 | Supabase (Postgres, Auth, RLS) | **Confirmado** | Projeto criado, migration aplicada, advisor de segurança limpo | `DATABASE_URL` (senha do banco) nos segredos do app/worker |
-| Claude API | **Precisa de credencial** | Adaptador e mapeamento de erros testados; sem chamada real | `ANTHROPIC_API_KEY` |
+| IA — demonstração (`mock`) | **Disponível** (sem credencial) | Testado ponta a ponta; resultados fictícios marcados como simulados | — |
+| IA — Gemini | **Precisa de credencial** | Adaptador e mapeamento de erros testados com API simulada; **sem chamada real ainda** | `GEMINI_API_KEY` (projeto sem faturamento) |
+| IA — Ollama | **Precisa de configuração** | Adaptador testado com API simulada; sem busca na web | `OLLAMA_MODEL` |
+| IA — Claude (Anthropic) | **Precisa de credencial** (paga) | Adaptador e mapeamento de erros testados; sem chamada real; só usado se escolhido | `ANTHROPIC_API_KEY` |
+| YouTube Data API | **Opcional** | Só status; só metadados de vídeos públicos; não bloqueia o restante | `YOUTUBE_API_KEY` |
 | Buffer API | **Precisa de credencial + validação documental** | — | Canais suportados, formatos, erros (Bloco G) |
 | YouTube Data API | **Precisa de credencial** | — | Credencial Google Cloud; captions só de vídeos autorizados |
 | vidIQ | **Precisa de validação documental** | — | Não há API pública confirmada para a plataforma; o acesso atual é só pelo assistente |

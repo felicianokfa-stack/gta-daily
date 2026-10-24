@@ -9,7 +9,7 @@ export interface ProjectRow {
   language: string;
   platforms: string[];
   editorial_rules: Record<string, unknown>;
-  settings: { max_attempts?: number; max_corrections?: number; monthly_budget_usd?: number };
+  settings: { max_attempts?: number; max_corrections?: number; monthly_budget_usd?: number; ai_provider?: string };
   created_at: Date;
 }
 
@@ -55,6 +55,8 @@ export interface TaskRow {
   finished_at: Date | null;
   duration_ms: number | null;
   usage: unknown;
+  /** Provedor de IA que atendeu a tarefa (rastreabilidade). null em tarefas anteriores ao Bloco de provedores. */
+  provider: string | null;
   cost_usd: string;
   idempotency_key: string;
   created_at: Date;
@@ -96,6 +98,8 @@ export interface OpportunityRow {
   source_urls: string[];
   quality_gate: { passed: boolean; reasons: string[]; checks: { rule: string; passed: boolean; detail: string }[] };
   status: "nova" | "pronta_para_estrategia" | "descartada";
+  /** true quando veio do modo de demonstração: dados fictícios, nunca fatos ou fontes reais. */
+  simulated: boolean;
   decided_by: string | null;
   decided_at: Date | null;
   created_at: Date;

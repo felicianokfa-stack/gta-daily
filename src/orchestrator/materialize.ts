@@ -1,5 +1,6 @@
 import { ResearchResult, VerificationResult } from "@/core/contracts/research";
 import { getNiche } from "@/core/niches";
+import { SIMULATED_PROVIDERS } from "@/connectors/ai/ids";
 import { json, type Sql } from "@/db/sql";
 import { evaluateQualityGate, isPrimarySource, suggestedPriority, verificationState } from "./quality-gate";
 import type { ProjectRow, RunRow } from "./types";
@@ -20,7 +21,12 @@ export async function materializeOpportunity(
   const niche = getNiche(project.niche);
 
   const sources = new Map([...research.sources, ...verification.additional_sources].map((s) => [s.url, s]));
-  for (const s of sources.values()) {
+  // Execução simulada (modo de demonstração): fontes e fatos são fictícios e não entram na base de fontes reais.
+  const [{ simulated }] = await tx.query<{ simulated: boolean }>(
+    `select exists(select 1 from agent_tasks where run_id = $1 and provider = any($2::text[])) as simulated`,
+    [run.id, `{${SIMULATED_PROVIDERS.join(",")}}`],
+  );
+  for (const s of simulated ? [] : sources.values()) {
     await tx.query(
       `insert into source_records (project_id, owner_id, url, title, publisher, published_at, kind, first_seen_run, last_seen_run)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $8)
@@ -48,9 +54,9 @@ export async function materializeOpportunity(
   const state = verificationState(verification);
   const rows = await tx.query<{ id: string }>(
     `insert into opportunities (project_id, owner_id, run_id, topic, summary, verification_state, relevance, relevance_reason,
-                                priority, claims, contradictions, caveats, source_urls, quality_gate, status)
+                                priority, claims, contradictions, caveats, source_urls, quality_gate, status, simulated)
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12::jsonb,
-             array(select jsonb_array_elements_text($13::jsonb)), $14::jsonb, $15)
+             array(select jsonb_array_elements_text($13::jsonb)), $14::jsonb, $15, $16)
      on conflict (run_id) do nothing
      returning id`,
     [
@@ -69,11 +75,13 @@ export async function materializeOpportunity(
       json([...sources.keys()]),
       json(gate),
       gate.passed ? "pronta_para_estrategia" : "nova",
+      simulated,
     ],
   );
   return {
     opportunity_id: rows[0]?.id ?? null,
-    sources: sources.size,
+    simulated,
+    sources: simulated ? 0 : sources.size,
     quality_gate: gate.passed ? "aprovada" : "reprovada",
     reasons: gate.reasons,
   };
