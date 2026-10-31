@@ -185,7 +185,7 @@ Estado também visível em **Agentes e conectores** na UI (`src/connectors/regis
 | A | Diagnóstico e arquitetura | Este documento; nada sobrescrito sem justificativa | ✅ |
 | B | Fundação e orquestração | Tarefa criada, processada, validada, com falha recuperada e retomada, coberta por testes (`npm test`) | ✅ |
 | C | Pesquisa/verificação real | Com `ANTHROPIC_API_KEY`: 3 temas GTA VI reais com 100% das fontes rastreáveis (URL recuperada) e incertezas explícitas; tabelas `opportunities` e `source_records`; portão de qualidade antes da estratégia | ✅ código e testes · ⏳ validação real depende da chave |
-| D | Central de Conteúdo | Vídeo de teste **autorizado** analisado (transcrição + segmentos); cortes com início, fim e justificativa | — |
+| D | Central de Conteúdo | Vídeo de teste **autorizado** analisado (transcrição + segmentos); cortes com início, fim e justificativa | 🟡 PR 1 (código e testes): biblioteca de materiais (referência + transcrição com tempos, sem baixar vídeo), Analista de Conteúdo, cortes candidatos e seleção. Faltam produção/roteiro/revisão/aprovação (PR 2) e fechamento (PR 3). Sem STT/FFmpeg/upload: a transcrição é informada pelo usuário |
 | E | Produção e renderização | Arquivo 9:16 válido, legendas sincronizadas, reproduzível (mesma entrada → mesmo arquivo) | — |
 | F | Adaptação por plataforma | Versões editáveis Reels, TikTok e Shorts (e carrossel) vinculadas ao corte e à fonte | — |
 | G | Aprovação e Buffer | Aprovação humana obrigatória; publicação de teste real confirmada pelo provedor, ou pendência documentada | — |
@@ -256,3 +256,11 @@ O resultado:
 
 - Cada projeto tem `monthly_budget_usd`. Ao atingir o gasto estimado do mês (UTC), a etapa seguinte para em "Exige ação" (`budget_exceeded`) **antes** de chamar o modelo.
 - Limitação: em fallback no servidor, só a tentativa que gerou a resposta entra na conta. Uma etapa que falha com erro do conector não registra custo parcial.
+
+
+## 9. Central de Conteúdo — PR 1 (base e análise)
+- **Tabelas** (`20261031000001_central_conteudo_base.sql`, RLS: dono lê, escrita só pelo servidor): `media_items` (referência/link opcional, duração, metadados, `transcript` jsonb com segmentos `{id, start_s, end_s, text}`, `usage_rights` com a declaração de autorização, `is_sample`) e `clip_candidates` (tempos, justificativa, pontuação 0–100 + motivo, riscos, `status` sugerido/selecionado/descartado, `simulated`). A coluna se chama `usage_rights` porque `authorization` é palavra reservada do Postgres.
+- **Contratos** (`src/core/contracts/content.ts`): entrada com a transcrição e resultado do Analista de Conteúdo (até 8 cortes). Regras de `validate`: tempos dentro da transcrição e coerentes com os segmentos citados (tolerância 1 s), duração do corte entre 5 e 120 s, segmentos existentes, linguagem de promessa proibida na pontuação e explicação obrigatória quando não há cortes.
+- **Pipeline** `analise_midia` = `[analista_conteudo]`; a entrada vem de `PipelineDefinition.buildRunInput` (que também passou a montar a entrada da pesquisa) e `onSucceeded` grava os candidatos marcando `simulated` quando o provedor é de demonstração.
+- **Direitos:** o material só é analisado com a autorização declarada (obrigatória); o link é só referência e nada é baixado.
+- **Demonstração:** o `mock` agrupa trechos consecutivos da própria transcrição e marca tudo como `[SIMULADO]`.

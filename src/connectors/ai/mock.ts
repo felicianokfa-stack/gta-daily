@@ -59,6 +59,7 @@ export class MockProvider implements ModelProvider {
     const input = (request.input ?? {}) as Record<string, unknown>;
     if (request.role === "pesquisador") return this.research(input);
     if (request.role === "verificador") return this.verify(input);
+    if (request.role === "analista_conteudo") return this.analyzeContent(input);
     throw new ConnectorError(
       "bad_request",
       `${SIMULATED_TAG} O modo de demonstração ainda não tem resposta para o papel "${request.role ?? "desconhecido"}".`,
@@ -82,6 +83,49 @@ export class MockProvider implements ModelProvider {
       relevance: { score: 50 + (n % 41), reason: `${SIMULATED_TAG} Valor de teste, não é avaliação editorial real.` },
     };
     return { data, retrievedSources: sources, usage: [USAGE("mock-pesquisador-1")] };
+  }
+
+  /** Agrupa segmentos consecutivos em até 3 cortes de ~20–60 s, sem inventar nada além do que a transcrição traz. */
+  private analyzeContent(input: Record<string, unknown>): StructuredResponse {
+    const transcript = (Array.isArray(input.transcript) ? input.transcript : []) as {
+      id: number;
+      start_s: number;
+      end_s: number;
+      text: string;
+    }[];
+    const title = String(input.title ?? "material");
+    const seedBase = seed(title);
+    const windows: typeof transcript[] = [];
+    let current: typeof transcript = [];
+    for (const seg of transcript) {
+      current.push(seg);
+      const length = seg.end_s - current[0].start_s;
+      if (length >= 25) {
+        windows.push(current);
+        current = [];
+      }
+    }
+    if (current.length > 0) {
+      const length = current[current.length - 1].end_s - current[0].start_s;
+      if (length >= 5 || windows.length === 0) windows.push(current);
+      else windows[windows.length - 1].push(...current);
+    }
+    const picked = windows.filter((w) => w[w.length - 1].end_s - w[0].start_s <= 120).slice(0, 3);
+    const data = {
+      summary: `${SIMULATED_TAG} Resumo fictício do material «${title}». Nenhuma IA real leu a transcrição: os cortes abaixo só agrupam trechos consecutivos para testar o fluxo.`,
+      topics: [`${SIMULATED_TAG} tema de teste`],
+      candidates: picked.map((w, i) => ({
+        title: `${SIMULATED_TAG} Corte ${i + 1}: ${w[0].text.slice(0, 60)}`.slice(0, 200),
+        justification: `${SIMULATED_TAG} Trecho de ${w.length} segmento(s) seguidos, agrupado automaticamente para teste (não é avaliação editorial real).`,
+        start_s: w[0].start_s,
+        end_s: w[w.length - 1].end_s,
+        segment_ids: w.map((s) => s.id),
+        score: { value: 50 + ((seedBase + i * 7) % 41), reason: `${SIMULATED_TAG} Pontuação de teste, sem critério editorial real.` },
+        risks: [`${SIMULATED_TAG} Risco de exemplo: conferir o contexto antes de usar.`],
+      })),
+      unknowns: [`${SIMULATED_TAG} Modo de demonstração: a transcrição não foi analisada por uma IA real.`],
+    };
+    return { data, retrievedSources: [], usage: [USAGE("mock-analista-1")] };
   }
 
   private verify(input: Record<string, unknown>): StructuredResponse {

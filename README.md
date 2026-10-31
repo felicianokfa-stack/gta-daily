@@ -44,10 +44,16 @@ Os agentes só falam com a interface `ModelProvider`; o provedor é escolhido po
 - **Sem provedor escolhido**, as etapas param em **"Exige ação"**: o modo de demonstração nunca é ligado por omissão.
 - **Sem fallback:** se o provedor escolhido falhar ou esgotar o limite gratuito, a etapa fica em "Exige ação" e você decide esperar ou trocar. A API da Anthropic nunca é usada automaticamente.
 - **Rastreabilidade:** cada tarefa grava o provedor (`agent_tasks.provider`) e o uso registra o provedor e o modelo. Resultados de provedores diferentes não são reaproveitados entre si.
-- **Demonstração:** oportunidades geradas ficam marcadas como **Simulado** (`opportunities.simulated`), as telas exibem "Modo de demonstração — resultado simulado" e as fontes fictícias (domínio reservado `.invalid`) nunca entram em `source_records`. Hoje só Pesquisador e Verificador têm resposta de demonstração.
+- **Demonstração:** oportunidades geradas ficam marcadas como **Simulado** (`opportunities.simulated`), as telas exibem "Modo de demonstração — resultado simulado" e as fontes fictícias (domínio reservado `.invalid`) nunca entram em `source_records`. Têm resposta de demonstração: Pesquisador, Verificador e Analista de Conteúdo.
 - **Sem busca na web** (mock, Ollama, Gemini sem `GEMINI_GROUNDING=on`): o Pesquisador só usa fontes já conhecidas do projeto e registra a limitação; fonte inventada é barrada pela validação.
 - **Gemini gratuito** (confirmado no AI Studio e na página de preços do Google em 31/10/2026, com UMA conta): o projeto da chave estava no nível gratuito, sem faturamento (o app não consegue verificar isso: confira em AI Studio → Chaves de API → “Nível de faturamento”). Limites do `gemini-3.5-flash-lite`: 15 requisições/min, 250 mil tokens/min e 500 requisições/dia (o `gemini-3.8-flash` tem 5/min e só 20/dia). Os valores mudam e valem por projeto Google: confira em AI Studio → Limite de taxa. O nível gratuito inclui “conteúdo usado para melhorar nossos produtos”: envie só conteúdo público ou de teste. A **busca do Google (grounding) não é gratuita**: aparece como “Não disponível” no nível gratuito e só existe no pago (5.000 pesquisas/mês incluídas e US$ 14 por 1.000 depois), por isso `GEMINI_GROUNDING` fica desligado. O app limita as requisições por minuto (`GEMINI_MAX_RPM`) e o tamanho de entrada/saída. A integração real foi exercitada em 31/10/2026 (pesquisa completa, custo US$ 0).
 - **YouTube Data API é opcional** e só entrega metadados de vídeos públicos (não baixa vídeo nem transcreve). Tem status próprio em Configurações; a importação manual de link/metadados/arquivo entra com a Central de Conteúdo (fase seguinte).
+
+## Central de Conteúdo (em construção: PR 1 de 3)
+Menu **Biblioteca**: cadastre um material (link como **referência**, metadados e **transcrição com marcações de tempo** colada por você) com a **declaração de autorização obrigatória**, ou use o **material de exemplo fictício**. **Analisar material** cria uma execução do agente **Analista de Conteúdo**, que sugere cortes com início/fim, justificativa e **pontuação editorial** (interesse estimado a partir da transcrição, nunca probabilidade de viralizar). Você pode **selecionar** ou **descartar** cada corte; tudo fica no histórico (auditoria).
+- A plataforma **não baixa nem armazena vídeo** e **não gera arquivos**: os cortes são sugestões com tempos.
+- Formato da transcrição: uma linha por trecho começando pelo tempo de início (`0:00 Texto`, `1:05 Texto`, `1:02:03 Texto`).
+- Próximos PRs: Estrategista, Roteirista, Produtor Audiovisual, Distribuidor e Revisor de Qualidade, com aprovação humana. O Analista de Desempenho fica para depois (precisa de métricas reais).
 
 ## Configurar o ambiente real
 Copie `.env.example` para `.env.local`. Na Vercel, cadastre as mesmas variáveis como variáveis de ambiente.
@@ -83,11 +89,11 @@ npm run build
 ## Estrutura
 ```
 src/core/          contratos Zod e contexto de nichos
-src/agents/        agentes de função (pesquisador, verificador)
+src/agents/        agentes de função (pesquisador, verificador, analista de conteúdo)
 src/connectors/    matriz de conectores, adaptador do Claude e ai/ (provedores: mock, gemini, ollama, fábrica e status)
 src/orchestrator/  engine (fila, lease, retries, auditoria), pipelines e consultas
 src/db/            camada SQL (Postgres/Supabase ou PGlite) e migração local
-src/app/           interface (Painel, Execuções, Projetos, Agentes, Configurações), rota do cron e /auth/callback
+src/app/           interface (Painel, Execuções, Projetos, Biblioteca, Agentes, Configurações), rota do cron e /auth/callback
 src/worker/        worker de longa duração
 supabase/          migrations e stub de auth para o modo local
 tests/             testes automatizados

@@ -13,7 +13,15 @@ import { testGeminiConnection } from "@/connectors/ai/gemini";
 import { testOllamaConnection } from "@/connectors/ai/ollama";
 import { describeProviders } from "@/connectors/ai/status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createProject, NewProjectInput } from "@/orchestrator/queries";
+import { TranscriptParseError } from "@/core/transcript";
+import {
+  createMedia,
+  createProject,
+  createSampleMedia,
+  getMedia,
+  NewProjectInput,
+  setClipStatus,
+} from "@/orchestrator/queries";
 import { InvalidStateError, NotFoundError } from "@/orchestrator/engine";
 
 export interface ActionState {
@@ -23,7 +31,9 @@ export interface ActionState {
 
 function failure(error: unknown): ActionState {
   if (error instanceof z.ZodError) return { ok: false, message: error.issues.map((i) => i.message).join(" · ") };
-  if (error instanceof NotFoundError || error instanceof InvalidStateError) return { ok: false, message: error.message };
+  if (error instanceof NotFoundError || error instanceof InvalidStateError || error instanceof TranscriptParseError) {
+    return { ok: false, message: error.message };
+  }
   console.error(error);
   return { ok: false, message: "Erro inesperado. Veja os logs do servidor." };
 }
@@ -228,4 +238,74 @@ export async function signOutAction(): Promise<void> {
     await supabase.auth.signOut();
   }
   redirect("/login");
+}
+
+// ------------------------------------------------------------------ Central de Conteúdo
+
+export async function createMediaAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    const row = await createMedia(await getDb(), user.id, {
+      projectId: String(form.get("projectId") ?? ""),
+      kind: form.get("kind") === "link" ? "link" : "transcricao",
+      title: String(form.get("title") ?? ""),
+      url: String(form.get("url") ?? ""),
+      duration: String(form.get("duration") ?? ""),
+      transcript_text: String(form.get("transcript_text") ?? ""),
+      notes: String(form.get("notes") ?? ""),
+      authorized: form.get("authorized") === "on",
+      authorization_basis: String(form.get("authorization_basis") ?? ""),
+    });
+    revalidatePath("/biblioteca");
+    return { ok: true, message: `Material “${row.title}” salvo na biblioteca.` };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function createSampleMediaAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    const projectId = z.uuid("Escolha um projeto").parse(form.get("projectId"));
+    await createSampleMedia(await getDb(), user.id, projectId);
+    revalidatePath("/biblioteca");
+    return { ok: true, message: "Material de exemplo (fictício) adicionado à biblioteca." };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Cria uma execução de análise do material; o usuário processa a fila na página da execução. */
+export async function analyzeMediaAction(mediaId: string): Promise<ActionState> {
+  const user = await requireUser();
+  let runId: string;
+  try {
+    const media = await getMedia(await getDb(), user.id, mediaId);
+    if (!media) return { ok: false, message: "Material não encontrado." };
+    const { run } = await (await getOrchestrator()).createRun({
+      userId: user.id,
+      projectId: media.project_id,
+      pipeline: "analise_midia",
+      input: { media_id: media.id },
+      idempotencyKey: randomUUID(),
+    });
+    runId = run.id;
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath(`/biblioteca/${mediaId}`);
+  redirect(`/execucoes/${runId}`);
+}
+
+const ClipStatus = z.enum(["sugerido", "selecionado", "descartado"]);
+
+export async function setClipStatusAction(mediaId: string, clipId: string, status: string): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    await setClipStatus(await getDb(), user.id, clipId, ClipStatus.parse(status));
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath(`/biblioteca/${mediaId}`);
+  return { ok: true, message: "Corte atualizado." };
 }

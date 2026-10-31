@@ -5,6 +5,7 @@ import { getAgent } from "@/agents/registry";
 import { ConnectorError, type ModelProvider, type ModelUsage } from "@/connectors/types";
 import { estimateCost } from "@/connectors/pricing";
 import { json, type Sql } from "@/db/sql";
+import { InvalidStateError, NotFoundError } from "./errors";
 import { inputHash } from "./hash";
 import { getPipeline } from "./pipelines";
 import type { OpportunityRow, ProcessOutcome, ProjectRow, RunRow, TaskRow } from "./types";
@@ -12,7 +13,6 @@ import type { OpportunityRow, ProcessOutcome, ProjectRow, RunRow, TaskRow } from
 export const DEFAULT_MAX_ATTEMPTS = 4;
 export const DEFAULT_MAX_CORRECTIONS = 2;
 const MAX_BACKOFF_SECONDS = 300;
-const KNOWN_SOURCES_LIMIT = 20;
 /** Resultados reaproveitáveis só dentro desta janela: o nicho é de notícias e envelhece rápido. */
 const REUSE_WINDOW_HOURS = 24;
 
@@ -36,8 +36,7 @@ export interface CreateRunParams {
   idempotencyKey?: string;
 }
 
-export class NotFoundError extends Error {}
-export class InvalidStateError extends Error {}
+export { InvalidStateError, NotFoundError };
 
 /**
  * Orquestrador do pipeline: cria execuções, enfileira tarefas, executa um papel por vez,
@@ -62,11 +61,8 @@ export class Orchestrator {
   async createRun(params: CreateRunParams): Promise<{ run: RunRow; created: boolean }> {
     const pipeline = getPipeline(params.pipeline);
     const project = await this.getOwnedProject(params.userId, params.projectId);
-    const knownSources = await this.sql.query<{ url: string; title: string }>(
-      `select url, title from source_records where project_id = $1 order by updated_at desc limit ${KNOWN_SOURCES_LIMIT}`,
-      [project.id],
-    );
-    const runInput = { ...params.input, niche_id: project.niche, known_sources: knownSources };
+    // Cada pipeline monta a entrada da execução a partir do projeto (fontes conhecidas, material, etc.).
+    const runInput = await pipeline.buildRunInput(this.sql, project, params.input);
     // Valida a entrada da primeira etapa antes de aceitar a execução.
     const firstAgent = getAgent(pipeline.steps[0]);
     const firstInput = firstAgent.buildInput(runInput, {});
