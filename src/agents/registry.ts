@@ -1,4 +1,5 @@
 import { AGENT_ROLES, type AgentRole } from "@/core/contracts/common";
+import { analistaConteudo } from "./analista-conteudo";
 import { pesquisador } from "./pesquisador";
 import { verificador } from "./verificador";
 import type { AnyAgentDefinition } from "./types";
@@ -6,6 +7,7 @@ import type { AnyAgentDefinition } from "./types";
 const IMPLEMENTED: Partial<Record<AgentRole, AnyAgentDefinition>> = {
   pesquisador,
   verificador,
+  analista_conteudo: analistaConteudo,
 };
 
 export function getAgent(role: AgentRole): AnyAgentDefinition {

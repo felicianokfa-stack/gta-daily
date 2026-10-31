@@ -118,3 +118,40 @@ export interface SourceRecordRow {
   created_at: Date;
   updated_at: Date;
 }
+
+export interface MediaRow {
+  id: string;
+  project_id: string;
+  owner_id: string;
+  kind: "link" | "transcricao" | "exemplo";
+  title: string;
+  url: string | null;
+  duration_seconds: number;
+  metadata: Record<string, unknown>;
+  transcript: { id: number; start_s: number; end_s: number; text: string }[];
+  usage_rights: { declared: boolean; basis: string };
+  is_sample: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ClipCandidateRow {
+  id: string;
+  media_id: string;
+  project_id: string;
+  owner_id: string;
+  run_id: string;
+  position: number;
+  title: string;
+  justification: string;
+  start_s: string;
+  end_s: string;
+  segment_ids: number[];
+  score: number;
+  score_reason: string;
+  risks: string[];
+  status: "sugerido" | "selecionado" | "descartado";
+  simulated: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
