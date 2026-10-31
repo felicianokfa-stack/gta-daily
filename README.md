@@ -58,7 +58,7 @@ Copie `.env.example` para `.env.local`. Na Vercel, cadastre as mesmas variáveis
 | `DATABASE_URL` | **segredo** | Supabase → Project Settings → Database → Connection string (Transaction pooler) |
 | `AI_PROVIDER` | opcional | `mock`, `gemini`, `ollama` ou `anthropic` (padrão do servidor; o projeto pode sobrescrever) |
 | `GEMINI_API_KEY` | **segredo** | aistudio.google.com → API keys (projeto sem faturamento) |
-| `GEMINI_MODEL`, `GEMINI_MAX_RPM`, `GEMINI_GROUNDING` | opcionais | modelo (o padrão `gemini-2.5-flash` **pode estar indisponível para contas novas**: use “Testar conexão” em Configurações, que faz uma geração mínima e lista os modelos que a sua chave pode usar), limite local por minuto (padrão 5) e busca do Google (`on`) |
+| `GEMINI_MODEL`, `GEMINI_MAX_RPM`, `GEMINI_GROUNDING` | opcionais | modelo (padrão `gemini-3.5-flash-lite`, validado com uma chave real em 31/10/2026; a disponibilidade varia por conta: o `gemini-2.5-flash` deu 404 e o `gemini-3.8-flash` falhou por sobrecarga. Use “Testar conexão” em Configurações, que faz uma geração mínima e lista os modelos que a sua chave pode usar), limite local por minuto (padrão 5) e busca do Google (`on`) |
 | `OLLAMA_MODEL`, `OLLAMA_BASE_URL` | opcionais | modelo local e endereço (padrão `http://localhost:11434`) |
 | `ANTHROPIC_API_KEY` | **segredo** (opcional) | console.anthropic.com → API Keys; só usada se escolhida |
 | `CLAUDE_MODEL` | opcional | padrão `claude-sonnet-5-5`; `claude-opus-5-5` para mais qualidade (≈2× o custo) |
