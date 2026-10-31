@@ -1,5 +1,5 @@
 import { ProducerInput, ProductionPlan } from "@/core/contracts/content";
-import { checkTimeline } from "@/core/content-rules";
+import { NEW_AUDIO_PATTERN, checkTimeline } from "@/core/content-rules";
 import type { AgentDefinition } from "./types";
 import { contextBlock, correctionBlock } from "./prompts";
 import { PRODUCTION_RULES, clipBlock, jsonBlock } from "./content-prompts";
@@ -15,7 +15,8 @@ Regras:
 ${PRODUCTION_RULES}
 - Cortes e legendas ficam em ordem, sem sobreposição, dentro do intervalo do corte.
 - Cada legenda tem no máximo 2 linhas de ${SUBTITLE_LINE_MAX} caracteres e dura pelo menos ${SUBTITLE_MIN_SECONDS}s.
-- Não invente imagens, gravações ou ativos que não existam: liste em "assets_needed" o que precisaria ser providenciado.`;
+- Não invente imagens, gravações ou ativos que não existam: liste em "assets_needed" o que precisaria ser providenciado.
+- "audio_notes" só descreve o áudio que o corte já tem (ex.: manter o áudio original). Não proponha trilha, música nem efeitos novos: o app não fornece esses ativos.`;
 
 export const produtorAudiovisual: AgentDefinition<ProducerInput, ProductionPlan> = {
   role: "produtor_audiovisual",
@@ -65,6 +66,9 @@ Monte o plano de edição (sem renderizar).
       if (dur < SUBTITLE_MIN_SECONDS) errors.push(`${where}: dura só ${dur.toFixed(2)}s (mínimo ${SUBTITLE_MIN_SECONDS}s).`);
       else if (s.text.replace(/\s/g, "").length / dur > SUBTITLE_MAX_CPS) warnings.push(`${where}: leitura rápida demais (mais de ${SUBTITLE_MAX_CPS} caracteres por segundo).`);
     });
+    if (result.audio_notes.some((n) => NEW_AUDIO_PATTERN.test(n))) {
+      warnings.push("As notas de áudio sugerem trilha, música ou efeitos novos, que o app não fornece: confirme se faz sentido.");
+    }
     warnings.push("Plano de edição: nenhum arquivo de vídeo foi gerado.");
     return { errors, warnings, evidence: [], limitations: result.assets_needed, unconfirmed: [] };
   },

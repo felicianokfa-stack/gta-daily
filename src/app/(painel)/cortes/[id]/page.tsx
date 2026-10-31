@@ -155,7 +155,7 @@ export default async function RascunhoPage({ params }: PageProps<"/cortes/[id]">
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-muted">Nada foi publicado. Os limites usados são os do app: confira nas plataformas antes de postar.</p>
+          <p className="mt-3 text-xs text-muted">Nada foi publicado. Os limites usados são os do app: confira nas plataformas antes de postar. O Instagram Carrossel (slides) não entra na produção de cortes de vídeo.</p>
         </Card>
 
         <Card title="Revisão (Revisor de Qualidade)">

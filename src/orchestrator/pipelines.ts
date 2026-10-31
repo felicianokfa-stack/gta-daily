@@ -1,6 +1,6 @@
 import type { AgentRole } from "@/core/contracts/common";
 import type { Sql } from "@/db/sql";
-import { PLATFORMS } from "@/core/content-rules";
+import { VIDEO_PLATFORMS } from "@/core/content-rules";
 import { InvalidStateError, NotFoundError } from "./errors";
 import { materializeOpportunity } from "./materialize";
 import { materializeClipCandidates } from "./materialize-clips";
@@ -73,8 +73,12 @@ async function clipRunInput(sql: Sql, project: ProjectRow, input: Record<string,
   const ids = new Set(clip.segment_ids);
   const segments = media.transcript.filter((s) => ids.has(s.id));
   if (segments.length === 0) throw new InvalidStateError("O corte não tem trechos da transcrição.");
-  const platforms = project.platforms.filter((p): p is (typeof PLATFORMS)[number] => (PLATFORMS as readonly string[]).includes(p));
-  if (platforms.length === 0) throw new InvalidStateError("O projeto não tem plataformas de destino: defina ao menos uma em Projetos.");
+  const platforms = VIDEO_PLATFORMS.filter((p) => project.platforms.includes(p));
+  if (platforms.length === 0) {
+    throw new InvalidStateError(
+      "O projeto não tem plataformas de vídeo (Reels, TikTok ou Shorts): defina ao menos uma em Projetos. O Instagram Carrossel (slides) não entra na produção de cortes.",
+    );
+  }
   return {
     clip_id: clip.id,
     media_id: media.id,

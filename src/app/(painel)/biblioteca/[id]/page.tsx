@@ -9,9 +9,12 @@ import type { ClipCandidateRow } from "@/orchestrator/types";
 import { Badge, Card, Empty, PageHeader, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
 import { SimulatedBanner } from "@/components/simulated-banner";
+import { Stepper, type StepItem } from "@/components/stepper";
 import { analyzeMediaAction, produceClipAction, setClipStatusAction } from "../../../actions";
 
 export const dynamic = "force-dynamic";
+// Analisar e produzir rodam na própria chamada (provedor real pode levar dezenas de segundos).
+export const maxDuration = 300;
 
 const CLIP_STATUS = {
   sugerido: { label: "Sugerido", tone: "neutral" },
@@ -55,7 +58,7 @@ function ClipCard({ clip, mediaId, drafts }: { clip: ClipCandidateRow; mediaId: 
           <ActionButton
             action={produceClipAction.bind(null, mediaId, clip.id)}
             label="Produzir roteiro e versões"
-            pendingLabel="Criando produção…"
+            pendingLabel="Produzindo… (pode levar 1–2 min)"
           />
         )}
         {clip.status !== "selecionado" && (
@@ -84,6 +87,29 @@ export default async function MaterialPage({ params }: PageProps<"/biblioteca/[i
     listMediaRuns(sql, user.id, id),
     listDrafts(sql, user.id, { mediaId: id }),
   ]);
+  const hasClips = clips.length > 0;
+  const hasSelected = clips.some((c) => c.status === "selecionado");
+  const hasDraft = drafts.length > 0;
+  const decided = drafts.some((d) => d.status !== "em_revisao");
+  const steps: StepItem[] = [
+    { title: "Material", hint: "Pronto: o texto com tempos está cadastrado abaixo.", state: "feito" },
+    { title: "Analisar", hint: hasClips ? "Feito: veja os cortes sugeridos." : "Clique em “Analisar material” (canto superior direito).", state: hasClips ? "feito" : "atual" },
+    {
+      title: "Escolher corte",
+      hint: hasSelected || hasDraft ? "Corte escolhido." : "Em “Cortes candidatos”, clique em “Selecionar corte”.",
+      state: hasSelected || hasDraft ? "feito" : hasClips ? "atual" : "pendente",
+    },
+    {
+      title: "Produzir",
+      hint: hasDraft ? "Rascunho criado: abra em “Rascunhos”." : "No corte selecionado, clique em “Produzir roteiro e versões”.",
+      state: hasDraft ? "feito" : hasSelected ? "atual" : "pendente",
+    },
+    {
+      title: "Decidir",
+      hint: decided ? "Decisão registrada." : "Abra o rascunho e aprove ou rejeite. Nada é publicado.",
+      state: decided ? "feito" : hasDraft ? "atual" : "pendente",
+    },
+  ];
   const metadata = Object.entries(media.metadata ?? {}).filter(([, v]) => typeof v === "string" && v.trim() !== "");
 
   return (
@@ -91,15 +117,16 @@ export default async function MaterialPage({ params }: PageProps<"/biblioteca/[i
       <PageHeader
         title={media.title}
         description={`Projeto ${media.project_name} · ${formatTimestamp(media.duration_seconds)} · criado em ${formatDate(media.created_at)}`}
-        actions={<ActionButton action={analyzeMediaAction.bind(null, media.id)} label="Analisar material" pendingLabel="Criando análise…" />}
+        actions={<ActionButton action={analyzeMediaAction.bind(null, media.id)} label="Analisar material" pendingLabel="Analisando… (pode levar até 1 min)" />}
       />
       {(media.is_sample || clips.some((c) => c.simulated)) && (
         <SimulatedBanner detail="Este material é um exemplo fictício e/ou há cortes vindos do modo de demonstração. Nada aqui é conteúdo real." />
       )}
+      <Stepper steps={steps} />
       <div className="grid gap-6">
         <Card title="Cortes candidatos">
           {clips.length === 0 ? (
-            <Empty>Nenhum corte ainda. Clique em “Analisar material”, e depois em “Processar fila agora” na página da execução.</Empty>
+            <Empty>Nenhum corte ainda. Clique em “Analisar material”: a análise roda sozinha e os cortes aparecem aqui.</Empty>
           ) : (
             <ul className="divide-y divide-border">
               {clips.map((c) => (
