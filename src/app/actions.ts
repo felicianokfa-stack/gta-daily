@@ -18,6 +18,7 @@ import {
   createMedia,
   createProject,
   createSampleMedia,
+  decideDraft,
   getMedia,
   NewProjectInput,
   setClipStatus,
@@ -308,4 +309,56 @@ export async function setClipStatusAction(mediaId: string, clipId: string, statu
   }
   revalidatePath(`/biblioteca/${mediaId}`);
   return { ok: true, message: "Corte atualizado." };
+}
+
+/** Cria a execução de produção de um corte SELECIONADO; o usuário processa a fila na página da execução. */
+export async function produceClipAction(mediaId: string, clipId: string): Promise<ActionState> {
+  const user = await requireUser();
+  let runId: string;
+  try {
+    const sql = await getDb();
+    const media = await getMedia(sql, user.id, mediaId);
+    if (!media) return { ok: false, message: "Material não encontrado." };
+    const { run } = await (await getOrchestrator()).createRun({
+      userId: user.id,
+      projectId: media.project_id,
+      pipeline: "producao_corte",
+      input: { clip_id: clipId },
+      idempotencyKey: randomUUID(),
+    });
+    runId = run.id;
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath(`/biblioteca/${mediaId}`);
+  redirect(`/execucoes/${runId}`);
+}
+
+const DraftDecision = z.object({
+  draftId: z.uuid(),
+  intent: z.enum(["aprovado", "rejeitado", "em_revisao"]),
+  note: z.string().max(1000).default(""),
+  force: z.boolean().default(false),
+});
+
+/** Aprova, rejeita ou reabre um rascunho. Nada é publicado: é só a decisão registrada. */
+export async function decideDraftAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const user = await requireUser();
+  try {
+    const d = DraftDecision.parse({
+      draftId: form.get("draftId"),
+      intent: form.get("intent"),
+      note: String(form.get("note") ?? ""),
+      force: form.get("force") === "on",
+    });
+    await decideDraft(await getDb(), user.id, d.draftId, d.intent, { note: d.note, force: d.force });
+    revalidatePath(`/cortes/${d.draftId}`);
+    revalidatePath("/cortes");
+    return {
+      ok: true,
+      message: d.intent === "aprovado" ? "Rascunho aprovado (nada foi publicado)." : d.intent === "rejeitado" ? "Rascunho rejeitado." : "Rascunho reaberto para revisão.",
+    };
+  } catch (error) {
+    return failure(error);
+  }
 }

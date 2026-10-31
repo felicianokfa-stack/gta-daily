@@ -33,7 +33,7 @@ export function describeProviders(): ProviderStatus[] {
           limits: [
             "Sem chamadas de rede e sem custo.",
             "Respostas fictícias e determinísticas, marcadas como simuladas; nenhuma fonte ou fato é real.",
-            "Têm resposta de demonstração os papéis Pesquisador, Verificador e Analista de Conteúdo (os demais entram nos próximos blocos).",
+            "Têm resposta de demonstração todos os papéis implementados (Pesquisador, Verificador, Analista de Conteúdo, Estrategista, Roteirista, Produtor Audiovisual, Distribuidor e Revisor de Qualidade); o Analista de Desempenho ainda não existe.",
           ],
         };
       case "gemini":

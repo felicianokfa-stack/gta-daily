@@ -155,3 +155,25 @@ export interface ClipCandidateRow {
   created_at: Date;
   updated_at: Date;
 }
+
+export interface ClipDraftRow {
+  id: string;
+  clip_id: string;
+  media_id: string;
+  project_id: string;
+  owner_id: string;
+  run_id: string;
+  brief: import("@/core/contracts/content").StrategyBrief;
+  script: import("@/core/contracts/content").ScriptResult;
+  production_plan: import("@/core/contracts/content").ProductionPlan;
+  platform_versions: import("@/core/contracts/content").PlatformVersion[];
+  review: import("@/core/contracts/content").ReviewResult;
+  gate: { passed: boolean; reasons: string[]; checks: { rule: string; passed: boolean; detail: string }[] };
+  status: "em_revisao" | "aprovado" | "rejeitado";
+  decided_by: string | null;
+  decided_at: Date | null;
+  decision_note: string | null;
+  simulated: boolean;
+  created_at: Date;
+  updated_at: Date;
+}

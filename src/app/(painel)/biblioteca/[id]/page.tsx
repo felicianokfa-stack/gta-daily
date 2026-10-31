@@ -4,12 +4,12 @@ import { getDb } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { RUN_STATUS } from "@/lib/labels";
 import { formatTimestamp } from "@/core/transcript";
-import { getMedia, listClipCandidates, listMediaRuns } from "@/orchestrator/queries";
+import { getMedia, listClipCandidates, listDrafts, listMediaRuns, type DraftListItem } from "@/orchestrator/queries";
 import type { ClipCandidateRow } from "@/orchestrator/types";
 import { Badge, Card, Empty, PageHeader, formatDate } from "@/components/ui";
 import { ActionButton } from "@/components/action-button";
 import { SimulatedBanner } from "@/components/simulated-banner";
-import { analyzeMediaAction, setClipStatusAction } from "../../../actions";
+import { analyzeMediaAction, produceClipAction, setClipStatusAction } from "../../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ const CLIP_STATUS = {
   descartado: { label: "Descartado", tone: "neutral" },
 } as const;
 
-function ClipCard({ clip, mediaId }: { clip: ClipCandidateRow; mediaId: string }) {
+function ClipCard({ clip, mediaId, drafts }: { clip: ClipCandidateRow; mediaId: string; drafts: DraftListItem[] }) {
   const status = CLIP_STATUS[clip.status];
   return (
     <li className="py-4 text-sm">
@@ -40,7 +40,24 @@ function ClipCard({ clip, mediaId }: { clip: ClipCandidateRow; mediaId: string }
       <p className="mt-2">{clip.justification}</p>
       <p className="mt-1 text-xs text-muted">Motivo da pontuação: {clip.score_reason}</p>
       {clip.risks.length > 0 && <p className="mt-1 text-xs text-muted">Riscos: {clip.risks.join(" · ")}</p>}
+      {drafts.length > 0 && (
+        <p className="mt-2 text-xs">
+          Rascunhos:{" "}
+          {drafts.map((d) => (
+            <Link key={d.id} href={`/cortes/${d.id}`} className="mr-2 underline underline-offset-2">
+              {formatDate(d.created_at)} ({d.status.replace("_", " ")})
+            </Link>
+          ))}
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
+        {clip.status === "selecionado" && (
+          <ActionButton
+            action={produceClipAction.bind(null, mediaId, clip.id)}
+            label="Produzir roteiro e versões"
+            pendingLabel="Criando produção…"
+          />
+        )}
         {clip.status !== "selecionado" && (
           <ActionButton action={setClipStatusAction.bind(null, mediaId, clip.id, "selecionado")} label="Selecionar corte" variant="secondary" />
         )}
@@ -62,7 +79,11 @@ export default async function MaterialPage({ params }: PageProps<"/biblioteca/[i
   const sql = await getDb();
   const media = await getMedia(sql, user.id, id);
   if (!media) notFound();
-  const [clips, runs] = await Promise.all([listClipCandidates(sql, user.id, id), listMediaRuns(sql, user.id, id)]);
+  const [clips, runs, drafts] = await Promise.all([
+    listClipCandidates(sql, user.id, id),
+    listMediaRuns(sql, user.id, id),
+    listDrafts(sql, user.id, { mediaId: id }),
+  ]);
   const metadata = Object.entries(media.metadata ?? {}).filter(([, v]) => typeof v === "string" && v.trim() !== "");
 
   return (
@@ -82,7 +103,7 @@ export default async function MaterialPage({ params }: PageProps<"/biblioteca/[i
           ) : (
             <ul className="divide-y divide-border">
               {clips.map((c) => (
-                <ClipCard key={c.id} clip={c} mediaId={media.id} />
+                <ClipCard key={c.id} clip={c} mediaId={media.id} drafts={drafts.filter((d) => d.clip_id === c.id)} />
               ))}
             </ul>
           )}
