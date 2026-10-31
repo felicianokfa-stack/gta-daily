@@ -49,7 +49,7 @@ export function describeProviders(): ProviderStatus[] {
             "Use uma chave do Google AI Studio de projeto SEM faturamento: o app não consegue verificar isso.",
             "O plano gratuito tem limites por minuto e por dia (por projeto Google); confira os valores atuais no AI Studio.",
             "“Testar conexão” faz UMA geração mínima (poucos tokens) e lista os modelos que a chave pode usar; um modelo pode existir e ainda assim ser recusado para contas novas.",
-            "O modelo padrão pode estar desatualizado: se a geração falhar com 404, defina GEMINI_MODEL com um modelo da lista.",
+            "A disponibilidade dos modelos varia por conta e muda com o tempo: se a geração falhar (404 ou sobrecarga 503), defina GEMINI_MODEL com outro modelo da lista.",
             "No plano gratuito o Google pode usar o conteúdo enviado para melhorar seus produtos: envie só conteúdo público ou de teste.",
             geminiGroundingEnabled()
               ? "Busca do Google ligada (GEMINI_GROUNDING=on): confirme no seu plano se é gratuita; não testada neste projeto."

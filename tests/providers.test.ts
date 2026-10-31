@@ -467,6 +467,48 @@ describe("teste de conexão do Gemini", () => {
     ).toMatchObject({ ok: false, code: "unavailable" });
   });
 
+  it("503 na geração: o teste mostra a resposta da API e o modelo, e a geração real é retentável", async () => {
+    process.env.GEMINI_API_KEY = "chave-de-teste-123456789";
+    const r = await testGeminiConnection({ fetch: api(() => geminiError(503, { error: { message: "The model is overloaded." } })) });
+    expect(r).toMatchObject({ ok: false, code: "unavailable" });
+    expect(r.message).toContain("503");
+    expect(r.message).toContain("The model is overloaded.");
+    expect(r.message).toContain(r.model);
+    const provider = new GeminiProvider({
+      apiKey: "chave-de-teste-123456789",
+      model: "gemini-sobrecarregado",
+      maxRequestsPerMinute: 100,
+      fetch: fakeFetch(() => geminiError(503, { error: { message: "The model is overloaded." } })),
+    });
+    const err = (await provider.generateStructured(reqFor()).catch((e) => e)) as ConnectorError;
+    expect(err).toMatchObject({ code: "unavailable", retryable: true });
+    expect(err.message).toContain("The model is overloaded.");
+    expect(err.message).toContain("gemini-sobrecarregado");
+  });
+
+  it("timeout informa em qual etapa travou (listagem ou geração)", async () => {
+    process.env.GEMINI_API_KEY = "chave-de-teste-123456789";
+    const timeout = () => {
+      throw new Error("The operation was aborted due to timeout");
+    };
+    const naListagem = await testGeminiConnection({ fetch: fakeFetch(timeout) });
+    expect(naListagem.message).toContain("ao listar os modelos");
+    const naGeracao = await testGeminiConnection({
+      fetch: fakeFetch((url) => (url.includes(":generateContent") ? timeout() : new Response(listBody, { status: 200 }))),
+    });
+    expect(naGeracao).toMatchObject({ ok: false, code: "unavailable" });
+    expect(naGeracao.message).toContain("na geração com o modelo");
+    expect(naGeracao.models.length).toBeGreaterThan(0);
+  });
+
+  it("o modelo padrão é o validado em geração real e pode ser trocado por GEMINI_MODEL", async () => {
+    const { DEFAULT_GEMINI_MODEL, geminiModel } = await import("@/connectors/ai/gemini");
+    expect(DEFAULT_GEMINI_MODEL).toBe("gemini-3.5-flash-lite");
+    expect(geminiModel()).toBe(DEFAULT_GEMINI_MODEL);
+    process.env.GEMINI_MODEL = "gemini-outro";
+    expect(geminiModel()).toBe("gemini-outro");
+  });
+
   it("na geração real, o 404 de modelo vira erro acionável e não retentável", async () => {
     const provider = new GeminiProvider({
       apiKey: "chave-de-teste-123456789",

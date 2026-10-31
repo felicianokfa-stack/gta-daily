@@ -18,11 +18,13 @@ import {
 
 /**
  * Adaptador da API oficial do Google Gemini (REST `generateContent`, chave em header, só no servidor/worker).
- * O modelo padrão é uma suposição e JÁ se mostrou indisponível para contas novas (404 em generateContent, mesmo
- * existindo em models.get): use "Testar conexão" para listar os modelos da sua chave e defina GEMINI_MODEL. Os limites do plano gratuito mudam e são
+ * O modelo padrão foi validado com UMA chave real, mas a disponibilidade varia por conta e muda com o tempo (o
+ * gemini-2.5-flash, por ex., deu 404 em generateContent mesmo existindo em models.get): use "Testar conexão" para
+ * listar os modelos da sua chave e defina GEMINI_MODEL se precisar. Os limites do plano gratuito mudam e são
  * por projeto do Google: confira os valores atuais no AI Studio (os números daqui não são garantidos).
  */
-export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+/** Respondeu a geração real com uma chave nova do AI Studio em 31/10/2026; o gemini-2.5-flash já dava 404 e o gemini-3.8-flash falhou (503/timeout). */
+export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com";
 
 export function geminiModel(): string {
@@ -207,7 +209,9 @@ export class GeminiProvider implements ModelProvider {
       const retryAfter = retryAfterSeconds(res.headers.get("retry-after")) ?? (delay ? Number.parseFloat(delay) : null);
       return new ConnectorError("rate_limited", "Limite de requisições do Gemini atingido.", true, { retry_after_seconds: retryAfter });
     }
-    if (res.status >= 500) return new ConnectorError("unavailable", `Gemini indisponível (${res.status}).`, true);
+    if (res.status >= 500) {
+      return new ConnectorError("unavailable", `Gemini indisponível (${res.status}): ${message}. Costuma ser temporário (sobrecarga do modelo ${this.model}); a etapa é reagendada.`, true);
+    }
     if (res.status === 404) {
       return new ConnectorError(
         "bad_request",
@@ -243,11 +247,11 @@ export async function testGeminiConnection(opts: { fetch?: FetchLike } = {}): Pr
   const base = (process.env.GEMINI_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   const doFetch: FetchLike = opts.fetch ?? ((input, init) => fetch(input, init));
   const headers = { "x-goog-api-key": apiKey };
-  const net = (error: unknown) =>
+  const net = (error: unknown, step: string) =>
     ({
       ok: false,
       code: "unavailable",
-      message: redactSecrets(`Falha de rede: ${error instanceof Error ? error.message : String(error)}`),
+      message: redactSecrets(`Falha de rede ${step}: ${error instanceof Error ? error.message : String(error)}`),
       model,
       models: [],
     }) satisfies ConnectionTestResult;
@@ -269,7 +273,7 @@ export async function testGeminiConnection(opts: { fetch?: FetchLike } = {}): Pr
       models = [...new Set(usable)].sort((a, b) => rank(a) - rank(b) || b.localeCompare(a)).slice(0, MAX_LISTED_MODELS);
     }
   } catch (error) {
-    return net(error);
+    return net(error, "ao listar os modelos (15 s)");
   }
 
   // 2) Geração mínima com o modelo configurado.
@@ -301,9 +305,11 @@ export async function testGeminiConnection(opts: { fetch?: FetchLike } = {}): Pr
         ? { ok: false, code: "quota_exhausted", message: "Limite diário do plano gratuito esgotado. Aguarde a renovação ou use o modo de demonstração.", model, models }
         : { ok: false, code: "rate_limited", message: "Limite por minuto atingido; a credencial está válida. Tente de novo em instantes.", model, models };
     }
-    if (res.status >= 500) return { ok: false, code: "unavailable", message: `Gemini respondeu ${res.status}.`, model, models };
+    if (res.status >= 500) {
+      return { ok: false, code: "unavailable", message: `O Gemini respondeu ${res.status} na geração com o modelo ${model}${detail ? `: ${detail}` : ""}. Costuma ser sobrecarga temporária: tente de novo ou use outro modelo da lista.${hint}`, model, models };
+    }
     return { ok: false, code: "bad_request", message: `Requisição recusada (${res.status}): ${detail}${hint}`, model, models };
   } catch (error) {
-    return { ...net(error), models };
+    return { ...net(error, `na geração com o modelo ${model} (30 s)`), models };
   }
 }
