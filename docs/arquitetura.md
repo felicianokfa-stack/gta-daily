@@ -185,7 +185,7 @@ Estado também visível em **Agentes e conectores** na UI (`src/connectors/regis
 | A | Diagnóstico e arquitetura | Este documento; nada sobrescrito sem justificativa | ✅ |
 | B | Fundação e orquestração | Tarefa criada, processada, validada, com falha recuperada e retomada, coberta por testes (`npm test`) | ✅ |
 | C | Pesquisa/verificação real | Com `ANTHROPIC_API_KEY`: 3 temas GTA VI reais com 100% das fontes rastreáveis (URL recuperada) e incertezas explícitas; tabelas `opportunities` e `source_records`; portão de qualidade antes da estratégia | ✅ código e testes · ⏳ validação real depende da chave |
-| D | Central de Conteúdo | Vídeo de teste **autorizado** analisado (transcrição + segmentos); cortes com início, fim e justificativa | 🟡 PR 1 (código e testes): biblioteca de materiais (referência + transcrição com tempos, sem baixar vídeo), Analista de Conteúdo, cortes candidatos e seleção. Faltam produção/roteiro/revisão/aprovação (PR 2) e fechamento (PR 3). Sem STT/FFmpeg/upload: a transcrição é informada pelo usuário |
+| D | Central de Conteúdo | Vídeo de teste **autorizado** analisado (transcrição + segmentos); cortes com início, fim e justificativa | 🟡 PR 1 e PR 2 (código e testes): biblioteca de materiais (referência + transcrição com tempos, sem baixar vídeo), Analista de Conteúdo, cortes candidatos e seleção; produção de um corte (Estrategista, Roteirista, Produtor Audiovisual, Distribuidor, Revisor), portão do rascunho e aprovação humana. Falta o fechamento (PR 3) e a validação real. Sem STT/FFmpeg/upload/publicação: a transcrição é informada pelo usuário e nada é renderizado nem publicado |
 | E | Produção e renderização | Arquivo 9:16 válido, legendas sincronizadas, reproduzível (mesma entrada → mesmo arquivo) | — |
 | F | Adaptação por plataforma | Versões editáveis Reels, TikTok e Shorts (e carrossel) vinculadas ao corte e à fonte | — |
 | G | Aprovação e Buffer | Aprovação humana obrigatória; publicação de teste real confirmada pelo provedor, ou pendência documentada | — |
@@ -264,3 +264,15 @@ O resultado:
 - **Pipeline** `analise_midia` = `[analista_conteudo]`; a entrada vem de `PipelineDefinition.buildRunInput` (que também passou a montar a entrada da pesquisa) e `onSucceeded` grava os candidatos marcando `simulated` quando o provedor é de demonstração.
 - **Direitos:** o material só é analisado com a autorização declarada (obrigatória); o link é só referência e nada é baixado.
 - **Demonstração:** o `mock` agrupa trechos consecutivos da própria transcrição e marca tudo como `[SIMULADO]`.
+
+## 10. Central de Conteúdo — PR 2 (produção e aprovação)
+- **Tabela** `clip_drafts` (`20261031000002_clip_drafts.sql`, RLS só-leitura para o dono): `brief`, `script`, `production_plan`, `platform_versions`, `review`, `gate` (jsonb), `status` (`em_revisao`|`aprovado`|`rejeitado`), decisão (`decided_by/at`, `decision_note`) e `simulated`. Uma por execução (`run_id` único).
+- **Contratos** (`src/core/contracts/content.ts`) — contexto comum `ClipContext` (corte + trechos da transcrição + plataformas do projeto) e um resultado por papel:
+  - **Estrategista** → `StrategyBrief`: mensagens com `label` de `EvidenceLabel` **sem `fato_confirmado`** (a transcrição não confirma fatos), cada uma citando segmentos.
+  - **Roteirista** → `ScriptResult`: batidas `{t_start, t_end, voiceover, on_screen_text, segment_id, quote}`; `quote` precisa aparecer **literalmente** no segmento citado.
+  - **Produtor Audiovisual** → `ProductionPlan`: `format = "9:16"` e `rendered = false` (literais): é um plano, nenhum arquivo é gerado; legendas de até 2 linhas × 42 caracteres e ≥ 0,8 s.
+  - **Distribuidor** → `Distribution`: uma versão por plataforma do projeto, dentro de `PLATFORM_LIMITS` (limites **do app**, não garantia oficial). Não publica.
+  - **Revisor de Qualidade** → `ReviewResult` (veredito + checagens + problemas).
+- **Regras compartilhadas** (`src/core/content-rules.ts`): linha do tempo, citação literal, hashtags, cobertura de plataformas, linguagem de promessa e vazamento como oficial; usadas pelas validações dos agentes e pelo portão.
+- **Pipeline** `producao_corte` (5 etapas); `buildRunInput` exige corte **selecionado**, material autorizado, trechos do corte e plataformas no projeto. `onSucceeded` (`materialize-draft.ts`) roda o **portão determinístico** (`draft-gate.ts`: tempos, citações, rótulos, plataformas, plano não renderizado, veredito do revisor) e grava o rascunho em `em_revisao`.
+- **Decisão humana** (`decideDraft`): rejeitar exige nota; aprovar um rascunho reprovado pelo portão exige confirmação ("aprovar mesmo assim"), registrada como `forced`; eventos `draft.decided` na auditoria. Aprovar não publica nada.

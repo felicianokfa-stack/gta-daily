@@ -4,10 +4,11 @@ import { MediaAuthorization } from "@/core/contracts/content";
 import { SAMPLE_MEDIA } from "@/core/sample-media";
 import { Transcript, parseTimestamp, parseTranscriptText, TranscriptParseError } from "@/core/transcript";
 import { json, type Sql } from "@/db/sql";
-import { NotFoundError } from "./errors";
+import { InvalidStateError, NotFoundError } from "./errors";
 import type {
   AuditRow,
   ClipCandidateRow,
+  ClipDraftRow,
   MediaRow,
   OpportunityRow,
   ProjectRow,
@@ -264,4 +265,72 @@ export async function setClipStatus(
   if (clip.status === status) return;
   await sql.query(`update clip_candidates set status = $2, updated_at = now() where id = $1`, [clip.id, status]);
   await auditUser(sql, userId, clip.project_id, "clip.status_changed", { clip_id: clip.id, from: clip.status, to: status });
+}
+
+// ------------------------------------------------------------------ Central de Conteúdo: rascunhos de produção
+
+export interface DraftListItem extends ClipDraftRow {
+  clip_title: string;
+  media_title: string;
+  project_name: string;
+}
+
+export async function listDrafts(sql: Sql, userId: string, opts: { mediaId?: string; clipId?: string } = {}): Promise<DraftListItem[]> {
+  return sql.query<DraftListItem>(
+    `select d.*, c.title as clip_title, m.title as media_title, p.name as project_name
+       from clip_drafts d
+       join clip_candidates c on c.id = d.clip_id
+       join media_items m on m.id = d.media_id
+       join content_projects p on p.id = d.project_id
+      where d.owner_id = $1 and ($2::uuid is null or d.media_id = $2::uuid) and ($3::uuid is null or d.clip_id = $3::uuid)
+      order by d.created_at desc`,
+    [userId, opts.mediaId ?? null, opts.clipId ?? null],
+  );
+}
+
+export async function getDraft(sql: Sql, userId: string, draftId: string): Promise<DraftListItem | null> {
+  const [row] = await sql.query<DraftListItem>(
+    `select d.*, c.title as clip_title, m.title as media_title, p.name as project_name
+       from clip_drafts d
+       join clip_candidates c on c.id = d.clip_id
+       join media_items m on m.id = d.media_id
+       join content_projects p on p.id = d.project_id
+      where d.id = $1 and d.owner_id = $2`,
+    [draftId, userId],
+  );
+  return row ?? null;
+}
+
+/**
+ * Decisão humana sobre um rascunho (aprovar, rejeitar ou reabrir), sempre auditada. Rejeitar exige uma nota, e aprovar
+ * um rascunho que o portão reprovou exige confirmação explícita ("aprovar mesmo assim"). Aprovar NÃO publica nada.
+ */
+export async function decideDraft(
+  sql: Sql,
+  userId: string,
+  draftId: string,
+  status: ClipDraftRow["status"],
+  opts: { note?: string; force?: boolean } = {},
+): Promise<void> {
+  const draft = await getDraft(sql, userId, draftId);
+  if (!draft) throw new NotFoundError("Rascunho não encontrado.");
+  const note = (opts.note ?? "").trim().slice(0, 1000);
+  if (status === "rejeitado" && note.length < 3) throw new InvalidStateError("Explique em uma frase por que está rejeitando.");
+  if (status === "aprovado" && !draft.gate.passed && !opts.force) {
+    throw new InvalidStateError('O portão de qualidade reprovou este rascunho. Marque "aprovar mesmo assim" para confirmar a decisão.');
+  }
+  if (draft.status === status) return;
+  const reopening = status === "em_revisao";
+  await sql.query(
+    `update clip_drafts set status = $2, decided_by = $3, decided_at = $4, decision_note = $5, updated_at = now() where id = $1`,
+    [draft.id, status, reopening ? null : "user", reopening ? null : new Date().toISOString(), reopening ? null : note || null],
+  );
+  await auditUser(sql, userId, draft.project_id, "draft.decided", {
+    draft_id: draft.id,
+    from: draft.status,
+    to: status,
+    gate_passed: draft.gate.passed,
+    forced: status === "aprovado" && !draft.gate.passed,
+    note: note || null,
+  });
 }

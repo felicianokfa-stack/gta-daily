@@ -4,6 +4,7 @@ import {
   ContentAnalysisInput,
   ContentAnalysisResult,
 } from "@/core/contracts/content";
+import { PROMISE_PATTERN } from "@/core/content-rules";
 import { formatTimestamp } from "@/core/transcript";
 import type { AgentDefinition } from "./types";
 import { contextBlock, correctionBlock } from "./prompts";
@@ -24,9 +25,6 @@ function formatTranscript(input: ContentAnalysisInput): string {
     .map((s) => `[${s.id}] ${formatTimestamp(s.start_s)}–${formatTimestamp(s.end_s)} (${s.start_s}s–${s.end_s}s): ${s.text}`)
     .join("\n");
 }
-
-/** Linguagem de promessa de resultado, proibida nas justificativas e nas pontuações. */
-const PROMISE_PATTERN = /probabilidade de (viraliz|sucesso)|vai viralizar|(garant\w+|certeza de) (viral|sucesso|alcance)/i;
 
 export const analistaConteudo: AgentDefinition<ContentAnalysisInput, ContentAnalysisResult> = {
   role: "analista_conteudo",

@@ -1,9 +1,11 @@
 import type { AgentRole } from "@/core/contracts/common";
 import type { Sql } from "@/db/sql";
+import { PLATFORMS } from "@/core/content-rules";
 import { InvalidStateError, NotFoundError } from "./errors";
 import { materializeOpportunity } from "./materialize";
 import { materializeClipCandidates } from "./materialize-clips";
-import type { MediaRow, ProjectRow, RunRow } from "./types";
+import { materializeDraft } from "./materialize-draft";
+import type { ClipCandidateRow, MediaRow, ProjectRow, RunRow } from "./types";
 
 const KNOWN_SOURCES_LIMIT = 20;
 
@@ -55,6 +57,39 @@ async function mediaRunInput(sql: Sql, project: ProjectRow, input: Record<string
   };
 }
 
+/** Produção de um corte: exige corte SELECIONADO, material autorizado, trechos do corte e plataformas no projeto. */
+async function clipRunInput(sql: Sql, project: ProjectRow, input: Record<string, unknown>) {
+  const clipId = String(input.clip_id ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(clipId)) throw new NotFoundError("Escolha um corte da biblioteca.");
+  const [clip] = await sql.query<ClipCandidateRow>(
+    `select * from clip_candidates where id = $1 and project_id = $2 and owner_id = $3`,
+    [clipId, project.id, project.owner_id],
+  );
+  if (!clip) throw new NotFoundError("Corte não encontrado neste projeto.");
+  if (clip.status !== "selecionado") throw new InvalidStateError("Selecione o corte antes de produzir o roteiro e as versões.");
+  const [media] = await sql.query<MediaRow>(`select * from media_items where id = $1 and owner_id = $2`, [clip.media_id, project.owner_id]);
+  if (!media) throw new NotFoundError("Material do corte não encontrado.");
+  if (media.usage_rights?.declared !== true) throw new InvalidStateError("Este material não tem a declaração de autorização.");
+  const ids = new Set(clip.segment_ids);
+  const segments = media.transcript.filter((s) => ids.has(s.id));
+  if (segments.length === 0) throw new InvalidStateError("O corte não tem trechos da transcrição.");
+  const platforms = project.platforms.filter((p): p is (typeof PLATFORMS)[number] => (PLATFORMS as readonly string[]).includes(p));
+  if (platforms.length === 0) throw new InvalidStateError("O projeto não tem plataformas de destino: defina ao menos uma em Projetos.");
+  return {
+    clip_id: clip.id,
+    media_id: media.id,
+    media_title: media.title,
+    is_sample: media.is_sample,
+    title: clip.title,
+    justification: clip.justification,
+    start_s: Number(clip.start_s),
+    end_s: Number(clip.end_s),
+    segments,
+    platforms,
+    niche_id: project.niche,
+  };
+}
+
 /**
  * Pipelines adaptativos (seção 4): a sequência depende do objetivo da tarefa.
  * Por enquanto existe o fluxo de pesquisa + verificação, que gera fontes e oportunidades (Bloco C).
@@ -75,6 +110,15 @@ const PIPELINES: Record<string, PipelineDefinition> = {
     steps: ["analista_conteudo"],
     buildRunInput: mediaRunInput,
     onSucceeded: materializeClipCandidates,
+  },
+  producao_corte: {
+    id: "producao_corte",
+    name: "Produção de um corte",
+    description:
+      "Briefing, roteiro, plano de edição, versões por plataforma e revisão de um corte selecionado. Nada é publicado: o resultado vai para a revisão humana.",
+    steps: ["estrategista", "roteirista", "produtor_audiovisual", "distribuidor", "revisor_qualidade"],
+    buildRunInput: clipRunInput,
+    onSucceeded: materializeDraft,
   },
 };
 

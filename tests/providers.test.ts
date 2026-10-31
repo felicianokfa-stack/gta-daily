@@ -159,7 +159,7 @@ describe("sem ANTHROPIC_API_KEY e modo de demonstração", () => {
     const ok = await mock.generateStructured({ ...base, role: "pesquisador", input: { topic: "Tema X" } } as StructuredRequest<unknown>);
     expect(ResearchResult.safeParse(ok.data).success).toBe(true);
     expect(ok.usage[0].provider).toBe("mock");
-    await expect(mock.generateStructured({ ...base, role: "roteirista", input: {} } as StructuredRequest<unknown>)).rejects.toMatchObject({
+    await expect(mock.generateStructured({ ...base, role: "analista_desempenho", input: {} } as StructuredRequest<unknown>)).rejects.toMatchObject({
       code: "bad_request",
       retryable: false,
     });

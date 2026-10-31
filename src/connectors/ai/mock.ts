@@ -7,13 +7,13 @@ import { ConnectorError, type ModelProvider, type RetrievedSource, type Structur
  * Serve para validar orquestração, contratos, portões, histórico e interface sem custo.
  * As fontes usam o domínio reservado `.invalid`, que não existe na internet.
  */
-export type MockScenario = "ok" | "invalid_schema" | "rate_limited" | "contradiction";
+export type MockScenario = "ok" | "invalid_schema" | "rate_limited" | "contradiction" | "review_adjustments";
 
 export const SIMULATED_TAG = "[SIMULADO]";
 
 export function mockScenarioFromEnv(): MockScenario {
   const v = process.env.MOCK_SCENARIO;
-  return v === "invalid_schema" || v === "rate_limited" || v === "contradiction" ? v : "ok";
+  return v === "invalid_schema" || v === "rate_limited" || v === "contradiction" || v === "review_adjustments" ? v : "ok";
 }
 
 function seed(text: string): number {
@@ -30,6 +30,10 @@ function fakeSources(topic: string): RetrievedSource[] {
     { url: `https://fonte-a.exemplo.invalid/${s}`, title: `${SIMULATED_TAG} Fonte fictícia A — ${topic}`.slice(0, 300), page_age: null },
     { url: `https://fonte-b.exemplo.invalid/${s}`, title: `${SIMULATED_TAG} Fonte fictícia B — ${topic}`.slice(0, 300), page_age: null },
   ];
+}
+
+function asSegments(value: unknown): { id: number; start_s: number; end_s: number; text: string }[] {
+  return (Array.isArray(value) ? value : []) as { id: number; start_s: number; end_s: number; text: string }[];
 }
 
 const USAGE = (model: string) => ({
@@ -60,6 +64,11 @@ export class MockProvider implements ModelProvider {
     if (request.role === "pesquisador") return this.research(input);
     if (request.role === "verificador") return this.verify(input);
     if (request.role === "analista_conteudo") return this.analyzeContent(input);
+    if (request.role === "estrategista") return this.strategy(input);
+    if (request.role === "roteirista") return this.script(input);
+    if (request.role === "produtor_audiovisual") return this.productionPlan(input);
+    if (request.role === "distribuidor") return this.distribution(input);
+    if (request.role === "revisor_qualidade") return this.review();
     throw new ConnectorError(
       "bad_request",
       `${SIMULATED_TAG} O modo de demonstração ainda não tem resposta para o papel "${request.role ?? "desconhecido"}".`,
@@ -83,6 +92,99 @@ export class MockProvider implements ModelProvider {
       relevance: { score: 50 + (n % 41), reason: `${SIMULATED_TAG} Valor de teste, não é avaliação editorial real.` },
     };
     return { data, retrievedSources: sources, usage: [USAGE("mock-pesquisador-1")] };
+  }
+
+  /** Papéis de produção: respostas curtas, derivadas só do corte recebido (nada de conteúdo real). */
+  private strategy(input: Record<string, unknown>): StructuredResponse {
+    const segments = asSegments(input.segments);
+    const platforms = (Array.isArray(input.platforms) ? input.platforms : ["instagram_reels"]) as string[];
+    const data = {
+      angle: `${SIMULATED_TAG} Ângulo de teste para «${String(input.title ?? "corte")}»`.slice(0, 300),
+      hook: `${SIMULATED_TAG} Gancho de teste para os primeiros segundos.`,
+      audience: `${SIMULATED_TAG} Público de teste.`,
+      key_messages: segments.slice(0, 2).map((seg, i) => ({
+        text: `${SIMULATED_TAG} Mensagem de teste ${i + 1} (sem valor editorial real).`,
+        label: i === 0 ? "hipotese" : "nao_verificado",
+        segment_ids: [seg.id],
+      })),
+      cta: `${SIMULATED_TAG} Pergunte ao público o que ele acha.`,
+      platform_priority: platforms,
+      cautions: [`${SIMULATED_TAG} Conferir o contexto antes de usar; nada aqui foi verificado.`],
+    };
+    return { data, retrievedSources: [], usage: [USAGE("mock-estrategista-1")] };
+  }
+
+  private script(input: Record<string, unknown>): StructuredResponse {
+    const segments = asSegments(input.segments);
+    const start = Number(input.start_s ?? 0);
+    const end = Number(input.end_s ?? 0);
+    const beats = segments
+      .map((seg) => ({
+        t_start: Math.max(seg.start_s, start),
+        t_end: Math.min(seg.end_s, end),
+        voiceover: `${SIMULATED_TAG} ${seg.text}`.slice(0, 400),
+        on_screen_text: SIMULATED_TAG,
+        segment_id: seg.id,
+        quote: null,
+      }))
+      .filter((b) => b.t_end > b.t_start);
+    const data = {
+      beats,
+      total_seconds: Math.max(1, end - start),
+      disclaimers: [`${SIMULATED_TAG} Roteiro de teste montado a partir da própria transcrição; não é texto editorial real.`],
+    };
+    return { data, retrievedSources: [], usage: [USAGE("mock-roteirista-1")] };
+  }
+
+  private productionPlan(input: Record<string, unknown>): StructuredResponse {
+    const script = (input.script ?? {}) as { beats?: { t_start: number; t_end: number; voiceover: string }[] };
+    const beats = script.beats ?? [];
+    const data = {
+      format: "9:16",
+      rendered: false,
+      summary: `${SIMULATED_TAG} Plano de edição de teste. Nenhum arquivo de vídeo foi gerado.`,
+      cuts: beats.map((b) => ({ t_start: b.t_start, t_end: b.t_end, framing: `${SIMULATED_TAG} Enquadramento centralizado`, note: "" })),
+      subtitles: beats.map((b) => ({
+        t_start: b.t_start,
+        t_end: b.t_end,
+        text: `${SIMULATED_TAG} ${b.voiceover.replace(SIMULATED_TAG, "").trim()}`.slice(0, 41),
+      })),
+      audio_notes: [`${SIMULATED_TAG} Áudio original do material, sem trilha.`],
+      assets_needed: [`${SIMULATED_TAG} O arquivo de vídeo original do material (não incluído na plataforma).`],
+    };
+    return { data, retrievedSources: [], usage: [USAGE("mock-produtor-1")] };
+  }
+
+  private distribution(input: Record<string, unknown>): StructuredResponse {
+    const platforms = (Array.isArray(input.platforms) ? input.platforms : ["instagram_reels"]) as string[];
+    const data = {
+      versions: platforms.map((platform) => ({
+        platform,
+        title: `${SIMULATED_TAG} Título de teste`,
+        caption: `${SIMULATED_TAG} Legenda de teste para ${platform}. Nada foi publicado.`,
+        hashtags: ["#simulado", "#exemplo"],
+        cover_text: SIMULATED_TAG,
+        timing_note: `${SIMULATED_TAG} Sem recomendação de horário real.`,
+      })),
+    };
+    return { data, retrievedSources: [], usage: [USAGE("mock-distribuidor-1")] };
+  }
+
+  private review(): StructuredResponse {
+    const adjustments = this.scenario === "review_adjustments";
+    const rules = ["fidelidade à transcrição", "rótulos de evidência", "tempos coerentes", "plataformas completas", "sem promessas"];
+    const data = {
+      verdict: adjustments ? "ajustes" : "aprovado_para_revisao",
+      summary: `${SIMULATED_TAG} Revisão de teste: nada foi avaliado por uma IA real.`,
+      checks: rules.map((rule, i) => ({
+        rule,
+        passed: !(adjustments && i === 0),
+        detail: `${SIMULATED_TAG} Checagem fictícia.`,
+      })),
+      issues: adjustments ? [`${SIMULATED_TAG} Problema fictício para testar o caminho de ajustes.`] : [],
+      suggested_fixes: adjustments ? [`${SIMULATED_TAG} Correção fictícia sugerida.`] : [],
+    };
+    return { data, retrievedSources: [], usage: [USAGE("mock-revisor-1")] };
   }
 
   /** Agrupa segmentos consecutivos em até 3 cortes de ~20–60 s, sem inventar nada além do que a transcrição traz. */

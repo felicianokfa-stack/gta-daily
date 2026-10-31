@@ -118,3 +118,9 @@ export const GATE_RULE: Record<string, string> = {
   evidencia_suficiente: "Evidência suficiente",
   contradicoes_explicadas: "Contradições explicadas",
 };
+
+export const DRAFT_STATUS: Record<"em_revisao" | "aprovado" | "rejeitado", { label: string; tone: Tone }> = {
+  em_revisao: { label: "Em revisão", tone: "warning" },
+  aprovado: { label: "Aprovado", tone: "success" },
+  rejeitado: { label: "Rejeitado", tone: "danger" },
+};
