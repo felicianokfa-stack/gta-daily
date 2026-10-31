@@ -17,6 +17,7 @@ import {
   StrategyBrief,
 } from "@/core/contracts/content";
 import type { Sql } from "@/db/sql";
+import { runAndSettle } from "@/orchestrator/auto-run";
 import { evaluateDraftGate } from "@/orchestrator/draft-gate";
 import { InvalidStateError, NotFoundError, Orchestrator } from "@/orchestrator/engine";
 import {
@@ -187,6 +188,11 @@ describe("Produtor Audiovisual: validação", () => {
   ])("rejeita: %s", (_n, bad, pattern) => {
     expect(errorsOf(produtorAudiovisual.validate(input(), bad, []))).toMatch(pattern);
   });
+  it("avisa quando as notas de áudio propõem trilha ou música nova", () => {
+    const v = produtorAudiovisual.validate(input(), plan({ audio_notes: ["Adicionar trilha épica de fundo"] }), []);
+    expect(v.errors).toEqual([]);
+    expect(v.warnings.join(" ")).toMatch(/áudio/i);
+  });
 });
 
 describe("Distribuidor: validação", () => {
@@ -202,8 +208,14 @@ describe("Distribuidor: validação", () => {
     ["hashtag inválida", distribution([version("instagram_reels", { hashtags: ["sem-cerquilha"] }), version("tiktok")]), /hashtag inválida/],
     ["hashtags repetidas", distribution([version("instagram_reels", { hashtags: ["#a", "#A"] }), version("tiktok")]), /repetidas/],
     ["promessa de resultado", distribution([version("instagram_reels", { caption: "Isso vai viralizar" }), version("tiktok")]), /promete resultado/],
+    ["tempo do corte em timing_note", distribution([version("instagram_reels", { timing_note: "Trecho de 100s a 135s" }), version("tiktok")]), /timing_note/],
   ])("rejeita: %s", (_n, bad, pattern) => {
     expect(errorsOf(distribuidor.validate(input(), bad, []))).toMatch(pattern);
+  });
+  it("avisa (sem bloquear) hashtags que não vêm do conteúdo nem do nicho", () => {
+    const v = distribuidor.validate(input(), distribution([version("instagram_reels", { hashtags: ["#teste", "#receitadebolo"] }), version("tiktok")]), []);
+    expect(v.errors).toEqual([]);
+    expect(v.warnings.join(" ")).toMatch(/receitadebolo/);
   });
 });
 
@@ -326,6 +338,31 @@ describe("pipeline producao_corte", () => {
 
     await sql.query(`update content_projects set platforms = '{}' where id = $1`, [projectId]);
     await expect(orch.createRun({ userId, projectId, pipeline: "producao_corte", input: { clip_id: clip.id } })).rejects.toThrow(InvalidStateError);
+  });
+
+  it("a produção só considera plataformas de vídeo; projeto só com Carrossel é recusado", async () => {
+    const { clip } = await selectedClip();
+    await sql.query(`update content_projects set platforms = '{instagram_reels,instagram_carrossel}' where id = $1`, [projectId]);
+    const orch = mockOrchestrator();
+    const { run } = await orch.createRun({ userId, projectId, pipeline: "producao_corte", input: { clip_id: clip.id } });
+    const task = (await taskRows(sql, run.id))[0];
+    expect(JSON.stringify(task.input)).not.toMatch(/instagram_carrossel/);
+    await sql.query(`update content_projects set platforms = '{instagram_carrossel}' where id = $1`, [projectId]);
+    await expect(orch.createRun({ userId, projectId, pipeline: "producao_corte", input: { clip_id: clip.id } })).rejects.toThrow(/plataformas de vídeo/);
+  });
+
+  it("runAndSettle processa a execução e devolve o rascunho; falha de etapa não lança", async () => {
+    const { clip } = await selectedClip();
+    const orch = mockOrchestrator();
+    const { run } = await orch.createRun({ userId, projectId, pipeline: "producao_corte", input: { clip_id: clip.id } });
+    const done = await runAndSettle(orch, sql, userId, run.id);
+    expect(done.status).toBe("succeeded");
+    expect(done.draftId).toBeTruthy();
+    const noKey = new Orchestrator({ sql, providerFactory: () => { throw new Error("sem provedor"); } });
+    const { run: run2 } = await orch.createRun({ userId, projectId, pipeline: "producao_corte", input: { clip_id: clip.id } });
+    const failed = await runAndSettle(noKey, sql, userId, run2.id);
+    expect(failed.draftId).toBeNull();
+    expect(failed.status).not.toBe("succeeded");
   });
 
   it("um agente que erra volta para correção e o pipeline se recupera (roteirista cita algo que não foi dito)", async () => {

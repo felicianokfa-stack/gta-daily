@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { AUDIT_LABEL, ERROR_ACTION, ROLE_LABEL, RUN_STATUS, TASK_STATUS } from "@/lib/labels";
-import { getOpportunityByRun, getRunDetail } from "@/orchestrator/queries";
+import { getDraftIdByRun, getOpportunityByRun, getRunDetail } from "@/orchestrator/queries";
 import { formatUsd } from "@/connectors/pricing";
 import { PROVIDER_LABEL, isSimulatedProvider, type ProviderId } from "@/connectors/ai/ids";
 import { SimulatedBanner } from "@/components/simulated-banner";
@@ -158,6 +158,8 @@ export default async function ExecucaoPage({ params }: PageProps<"/execucoes/[id
   if (!detail) notFound();
   const { run, tasks, audit } = detail;
   const opportunity = await getOpportunityByRun(sql, user.id, run.id);
+  const draftId = run.status === "succeeded" && run.pipeline === "producao_corte" ? await getDraftIdByRun(sql, user.id, run.id) : null;
+  const mediaId = typeof run.input.media_id === "string" ? run.input.media_id : null;
   const totalCost = tasks.reduce((sum, t) => sum + Number(t.cost_usd), 0);
   const status = RUN_STATUS[run.status];
   const active = run.status === "queued" || run.status === "running";
@@ -191,6 +193,16 @@ export default async function ExecucaoPage({ params }: PageProps<"/execucoes/[id
         {opportunity && (
           <Link href="/oportunidades" className="text-sm underline">
             ver oportunidade gerada
+          </Link>
+        )}
+        {draftId && (
+          <Link href={`/cortes/${draftId}`} className="text-sm font-medium underline">
+            Abrir o rascunho pronto →
+          </Link>
+        )}
+        {run.status === "succeeded" && run.pipeline === "analise_midia" && mediaId && (
+          <Link href={`/biblioteca/${mediaId}`} className="text-sm font-medium underline">
+            Ver os cortes sugeridos →
           </Link>
         )}
         <AutoRefresh active={active} />

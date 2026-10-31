@@ -369,3 +369,10 @@ describe("RLS das tabelas da Central de Conteúdo", () => {
     }
   });
 });
+
+describe("material de exemplo duplicado", () => {
+  it("bloqueia um segundo exemplo no mesmo projeto, com mensagem clara", async () => {
+    await createSampleMedia(sql, userId, projectId);
+    await expect(createSampleMedia(sql, userId, projectId)).rejects.toThrow(/já tem o material de exemplo/);
+  });
+});

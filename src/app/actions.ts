@@ -24,6 +24,7 @@ import {
   setClipStatus,
 } from "@/orchestrator/queries";
 import { InvalidStateError, NotFoundError } from "@/orchestrator/engine";
+import { runAndSettle } from "@/orchestrator/auto-run";
 
 export interface ActionState {
   ok: boolean;
@@ -276,26 +277,29 @@ export async function createSampleMediaAction(_prev: ActionState, form: FormData
   }
 }
 
-/** Cria uma execução de análise do material; o usuário processa a fila na página da execução. */
+/** Cria a análise e já a processa; se der certo volta ao material, senão abre a execução para ver o que houve. */
 export async function analyzeMediaAction(mediaId: string): Promise<ActionState> {
   const user = await requireUser();
-  let runId: string;
+  let target: string;
   try {
-    const media = await getMedia(await getDb(), user.id, mediaId);
+    const sql = await getDb();
+    const media = await getMedia(sql, user.id, mediaId);
     if (!media) return { ok: false, message: "Material não encontrado." };
-    const { run } = await (await getOrchestrator()).createRun({
+    const orchestrator = await getOrchestrator();
+    const { run } = await orchestrator.createRun({
       userId: user.id,
       projectId: media.project_id,
       pipeline: "analise_midia",
       input: { media_id: media.id },
       idempotencyKey: randomUUID(),
     });
-    runId = run.id;
+    const settled = await runAndSettle(orchestrator, sql, user.id, run.id);
+    target = settled.status === "succeeded" ? `/biblioteca/${mediaId}?analisado=1` : `/execucoes/${run.id}`;
   } catch (error) {
     return failure(error);
   }
   revalidatePath(`/biblioteca/${mediaId}`);
-  redirect(`/execucoes/${runId}`);
+  redirect(target);
 }
 
 const ClipStatus = z.enum(["sugerido", "selecionado", "descartado"]);
@@ -311,27 +315,30 @@ export async function setClipStatusAction(mediaId: string, clipId: string, statu
   return { ok: true, message: "Corte atualizado." };
 }
 
-/** Cria a execução de produção de um corte SELECIONADO; o usuário processa a fila na página da execução. */
+/** Cria a produção de um corte SELECIONADO e já a processa; se der certo abre o rascunho, senão a execução. */
 export async function produceClipAction(mediaId: string, clipId: string): Promise<ActionState> {
   const user = await requireUser();
-  let runId: string;
+  let target: string;
   try {
     const sql = await getDb();
     const media = await getMedia(sql, user.id, mediaId);
     if (!media) return { ok: false, message: "Material não encontrado." };
-    const { run } = await (await getOrchestrator()).createRun({
+    const orchestrator = await getOrchestrator();
+    const { run } = await orchestrator.createRun({
       userId: user.id,
       projectId: media.project_id,
       pipeline: "producao_corte",
       input: { clip_id: clipId },
       idempotencyKey: randomUUID(),
     });
-    runId = run.id;
+    const settled = await runAndSettle(orchestrator, sql, user.id, run.id);
+    target = settled.draftId ? `/cortes/${settled.draftId}` : `/execucoes/${run.id}`;
   } catch (error) {
     return failure(error);
   }
   revalidatePath(`/biblioteca/${mediaId}`);
-  redirect(`/execucoes/${runId}`);
+  revalidatePath("/cortes");
+  redirect(target);
 }
 
 const DraftDecision = z.object({

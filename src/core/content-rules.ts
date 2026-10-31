@@ -7,6 +7,12 @@ export const PLATFORMS = ["instagram_reels", "instagram_carrossel", "tiktok", "y
 export type Platform = (typeof PLATFORMS)[number];
 
 /**
+ * Plataformas que recebem um CORTE DE VÍDEO. O Instagram Carrossel é formato de slides/fotos: fica fora da produção
+ * de cortes (não faz sentido escrever a legenda de um carrossel para um vídeo).
+ */
+export const VIDEO_PLATFORMS: readonly Platform[] = ["instagram_reels", "tiktok", "youtube_shorts"];
+
+/**
  * Limites USADOS PELO APP para validar as versões por plataforma. São valores conservadores adotados aqui, não uma
  * garantia oficial das plataformas (que mudam as regras): confira nas plataformas antes de publicar.
  */
@@ -109,4 +115,22 @@ export function distributionProblems(platforms: Platform[], versions: VersionLik
     errors.push(...textProblems([v.title, v.caption, v.cover_text], v.platform));
   }
   return errors;
+}
+
+/** Horário de publicação não é o tempo do corte: "100s a 135s" não é uma observação de horário. */
+export const CLIP_TIME_IN_TIMING_NOTE = /\b\d+(?:[.,]\d+)?\s*s\b/i;
+
+/** Notas de áudio que propõem trilha, música ou efeitos que o app não fornece. */
+export const NEW_AUDIO_PATTERN = /trilha|m[uú]sica|efeito sonoro|sfx|locu[cç][aã]o nova/i;
+
+/**
+ * Hashtags que não vêm do conteúdo nem do nicho. A conferência é por trecho de texto (sem acentos, maiúsculas nem
+ * espaços): "#GTAVI" bate com "GTA VI". Serve para um AVISO ao revisor humano, não para bloquear.
+ */
+export function ungroundedHashtags(hashtags: string[], groundingTexts: string[]): string[] {
+  const haystack = normalizeText(groundingTexts.join(" ")).replace(/\s/g, "");
+  return hashtags.filter((h) => {
+    const tag = normalizeText(h.replace(/^#/, "")).replace(/\s/g, "");
+    return tag.length > 0 && !haystack.includes(tag);
+  });
 }

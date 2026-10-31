@@ -201,6 +201,10 @@ export async function createMedia(sql: Sql, userId: string, data: NewMediaInput)
 /** Material de exemplo FICTÍCIO (marcado como tal), para testar o fluxo sem usar conteúdo de terceiros. */
 export async function createSampleMedia(sql: Sql, userId: string, projectId: string): Promise<MediaRow> {
   const project = await assertProjectOwner(sql, userId, projectId);
+  const [existing] = await sql.query<{ id: string }>(`select id from media_items where project_id = $1 and is_sample limit 1`, [project.id]);
+  if (existing) {
+    throw new InvalidStateError("Este projeto já tem o material de exemplo. Abra-o na lista “Seus materiais”, logo abaixo.");
+  }
   const transcript = Transcript.parse(parseTranscriptText(SAMPLE_MEDIA.transcript_text, SAMPLE_MEDIA.duration_seconds));
   const [row] = await sql.query<MediaRow>(
     `insert into media_items (project_id, owner_id, kind, title, url, duration_seconds, metadata, transcript, usage_rights, is_sample)
@@ -333,4 +337,10 @@ export async function decideDraft(
     forced: status === "aprovado" && !draft.gate.passed,
     note: note || null,
   });
+}
+
+/** Rascunho gerado por uma execução de produção (se já existir). */
+export async function getDraftIdByRun(sql: Sql, userId: string, runId: string): Promise<string | null> {
+  const [row] = await sql.query<{ id: string }>(`select id from clip_drafts where run_id = $1 and owner_id = $2`, [runId, userId]);
+  return row?.id ?? null;
 }
