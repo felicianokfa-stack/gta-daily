@@ -47,13 +47,13 @@ export function describeProviders(): ProviderStatus[] {
           webSearch: geminiGroundingEnabled(),
           limits: [
             "Use uma chave do Google AI Studio de projeto SEM faturamento: o app não consegue verificar isso.",
-            "O plano gratuito tem limites por minuto e por dia (por projeto Google); confira os valores atuais no AI Studio.",
+            "Limites do nível gratuito observados no AI Studio em 31/10/2026 (por projeto Google; mudam, confira em AI Studio → Limite de taxa): gemini-3.5-flash-lite 15 req/min, 250 mil tokens/min e 500 req/dia; gemini-3.8-flash 5 req/min e 20 req/dia.",
             "“Testar conexão” faz UMA geração mínima (poucos tokens) e lista os modelos que a chave pode usar; um modelo pode existir e ainda assim ser recusado para contas novas.",
             "A disponibilidade dos modelos varia por conta e muda com o tempo: se a geração falhar (404 ou sobrecarga 503), defina GEMINI_MODEL com outro modelo da lista.",
             "No plano gratuito o Google pode usar o conteúdo enviado para melhorar seus produtos: envie só conteúdo público ou de teste.",
             geminiGroundingEnabled()
-              ? "Busca do Google ligada (GEMINI_GROUNDING=on): confirme no seu plano se é gratuita; não testada neste projeto."
-              : "Sem busca na web: o Pesquisador só usa fontes já conhecidas e registra a limitação.",
+              ? "Busca do Google ligada (GEMINI_GROUNDING=on), mas a página de preços do Google (31/10/2026) mostra \"Não disponível\" no nível gratuito para o gemini-3.5-flash-lite: sem faturamento a chamada deve falhar. Não testada neste projeto."
+              : "Sem busca na web (a busca do Google não é gratuita: só existe no nível pago): o Pesquisador só usa fontes já conhecidas e registra a limitação.",
           ],
         };
       case "ollama":
